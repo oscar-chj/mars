@@ -222,7 +222,7 @@ export default function AdminClaimsPage() {
     : store.students
 
   const formatMatric = (matric: string) => {
-    if (activeIteration !== 2) return matric
+    if (activeIteration !== 2 && activeIteration !== 3) return matric
     if (matric === "U2320491A" || matric === "alice") return "BC223014"
     if (matric === "U2320555D" || matric === "david") return "BC223055"
     if (matric === "U2320999E" || matric === "emma") return "BC223099"
@@ -240,7 +240,7 @@ export default function AdminClaimsPage() {
         id: activeClaim.studentId,
         name: activeClaim.studentName,
         email: `${activeClaim.studentName.toLowerCase().replace(/\s+/g, "")}@student.edu`,
-        matricNumber: activeIteration === 2 ? "BC223014" : "U2320491A",
+        matricNumber: activeIteration === 2 || activeIteration === 3 ? "BC223014" : "U2320491A",
         points: 0,
       }
     : null
@@ -423,10 +423,10 @@ export default function AdminClaimsPage() {
       <Toaster position="top-right" closeButton richColors />
 
       {/* Header Section */}
-      <div className="flex flex-col gap-4 border-b border-border pb-4 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">
-            {activeIteration === 2 ? "Claims Queue" : "Admin Claims Inbox"}
+            {activeIteration === 2 || activeIteration === 3 ? "Claims Queue" : "Admin Claims Inbox"}
           </h1>
           <p className="mt-1 text-muted-foreground">
             Review submitted student claims, verify certificates, and award
@@ -655,7 +655,7 @@ export default function AdminClaimsPage() {
                         Certificate of Achievement
                       </div>
                       <h3 className="text-xl font-bold tracking-tight text-amber-900 dark:text-amber-400">
-                        {activeIteration === 2
+                        {activeIteration === 2 || activeIteration === 3
                           ? "ACTIVITY RECORD RECORDING"
                           : "COMMUNITY MERIT"}
                       </h3>
@@ -708,7 +708,7 @@ export default function AdminClaimsPage() {
                           Authorized Signature
                         </span>
                         <span className="block border-t border-amber-700/20 px-1 pt-0.5 font-serif text-xs font-medium text-amber-900/90 italic dark:text-amber-300/90">
-                          {activeIteration === 2
+                          {activeIteration === 2 || activeIteration === 3
                             ? "MARS Registrar"
                             : "Org. Committee"}
                         </span>

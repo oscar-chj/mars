@@ -51,7 +51,7 @@ function EmailBodyFrame({ log }: { log: SystemLog }) {
     <div className="w-full overflow-hidden rounded-md border border-border bg-card font-sans shadow-sm">
       {/* Header Banner */}
       <div className="border-b border-border bg-primary px-6 py-4 text-center text-base font-bold tracking-wide text-primary-foreground">
-        {activeIteration === 2
+        {activeIteration === 2 || activeIteration === 3
           ? "MARS Student Administration"
           : "Community Merits Program"}
       </div>
@@ -121,12 +121,12 @@ function EmailBodyFrame({ log }: { log: SystemLog }) {
         {/* Signature */}
         <div className="mt-6 space-y-0.5 border-t border-border pt-4 text-xs text-muted-foreground">
           <p className="font-semibold">
-            {activeIteration === 2
+            {activeIteration === 2 || activeIteration === 3
               ? "MARS Registrar"
               : "Office of Student Affairs"}
           </p>
           <p>
-            {activeIteration === 2
+            {activeIteration === 2 || activeIteration === 3
               ? "MARS Office of Records"
               : "Community Merits Commission"}
           </p>
@@ -352,10 +352,10 @@ export default function AdminLogsPage() {
   return (
     <div className="mx-auto max-w-7xl space-y-6 p-4 sm:p-6 lg:p-8">
       {/* Header Section */}
-      <div className="flex flex-col gap-4 border-b border-border pb-4 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">
-            {activeIteration === 2 ? "System Logs" : "System Activity Logs"}
+            {activeIteration === 2 || activeIteration === 3 ? "System Logs" : "System Activity Logs"}
           </h1>
           <p className="mt-1 text-muted-foreground">
             Monitor system events and email delivery status.
@@ -371,7 +371,7 @@ export default function AdminLogsPage() {
       </div>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <Card>
+        <Card className="overflow-hidden border shadow-sm">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Logs</CardTitle>
           </CardHeader>
@@ -380,7 +380,7 @@ export default function AdminLogsPage() {
             <p className="mt-1 text-xs text-muted-foreground">Logged events</p>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="overflow-hidden border shadow-sm">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Delivered</CardTitle>
           </CardHeader>
@@ -393,7 +393,7 @@ export default function AdminLogsPage() {
             </p>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="overflow-hidden border shadow-sm">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Sent</CardTitle>
           </CardHeader>
@@ -406,7 +406,7 @@ export default function AdminLogsPage() {
             </p>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="overflow-hidden border shadow-sm">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
               Delivery Failures
@@ -425,16 +425,31 @@ export default function AdminLogsPage() {
 
       {/* Filter / Search Bar */}
       <div className="flex flex-col items-center justify-between gap-4 sm:flex-row">
-        <div className="relative w-full flex-1">
+        <div className="relative">
           <Search className="absolute top-2.5 left-3 h-4 w-4 text-muted-foreground" />
           <Input
-            placeholder="Search by recipient, subject, or type..."
+            placeholder="Search"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="w-full pl-9"
           />
         </div>
         <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto">
+          {(search || statusFilter !== "ALL" || eventFilter !== "ALL") && (
+            <Button
+              variant="ghost"
+              onClick={() => {
+                setSearch("")
+                setStatusFilter("ALL")
+                setEventFilter("ALL")
+              }}
+              className="h-9 cursor-pointer px-2 text-muted-foreground lg:px-3"
+            >
+              Reset
+              <RotateCcw className="ml-2 h-4 w-4" />
+            </Button>
+          )}
+
           <Select value={statusFilter} onValueChange={setStatusFilter}>
             <SelectTrigger className="w-[140px] cursor-pointer">
               <SelectValue placeholder="All Statuses" />
@@ -471,27 +486,12 @@ export default function AdminLogsPage() {
               </SelectItem>
             </SelectContent>
           </Select>
-
-          {(search || statusFilter !== "ALL" || eventFilter !== "ALL") && (
-            <Button
-              variant="ghost"
-              onClick={() => {
-                setSearch("")
-                setStatusFilter("ALL")
-                setEventFilter("ALL")
-              }}
-              className="h-9 cursor-pointer px-2 text-muted-foreground lg:px-3"
-            >
-              Reset
-              <RotateCcw className="ml-2 h-4 w-4" />
-            </Button>
-          )}
         </div>
       </div>
 
       {/* Logs Table */}
-      <Card className="overflow-hidden">
-        <CardContent className="p-0">
+      <Card className="overflow-hidden border shadow-sm">
+        <CardContent>
           <Table>
             <TableHeader>
               <TableRow>
@@ -564,7 +564,7 @@ export default function AdminLogsPage() {
           open={!!selectedLog}
           onOpenChange={(open) => !open && setSelectedLog(null)}
         >
-          <DrawerContent className="flex h-full w-full flex-col overflow-y-auto sm:max-w-[35vw]">
+          <DrawerContent className="flex h-full w-full flex-col overflow-x-hidden overflow-y-auto sm:max-w-[35vw]">
             <DrawerHeader className="border-b border-border pb-4">
               <DrawerTitle className="flex items-center gap-2 text-xl font-bold">
                 <Mail className="h-5 w-5 text-primary" />

@@ -4,11 +4,12 @@ import React, { createContext, useContext, useState, useEffect } from "react"
 import { useMockStore } from "@/store/useMockStore"
 
 export type Phase = 1 | 2 | 3
-export type Iteration = 1 | 2
+export type Iteration = 1 | 2 | 3
 
 export interface PhaseContextType {
   activePhase: Phase
   activeIteration: Iteration
+  isReady: boolean
   setPhase: (phase: Phase) => void
   setIteration: (iteration: Iteration) => void
 }
@@ -18,6 +19,7 @@ const PhaseContext = createContext<PhaseContextType | undefined>(undefined)
 export function PhaseProvider({ children }: { children: React.ReactNode }) {
   const [activeIteration, setActiveIterationState] = useState<Iteration>(1)
   const [activePhase, setActivePhaseState] = useState<Phase>(3)
+  const [isReady, setIsReady] = useState(false)
 
   useEffect(() => {
     if (activePhase === 2) {
@@ -33,7 +35,7 @@ export function PhaseProvider({ children }: { children: React.ReactNode }) {
       let loadedIteration: Iteration = 1
       let loadedPhase: Phase = 3
 
-      if (savedIteration === "1" || savedIteration === "2") {
+      if (savedIteration === "1" || savedIteration === "2" || savedIteration === "3") {
         loadedIteration = Number(savedIteration) as Iteration
       }
       if (savedPhase === "1" || savedPhase === "2" || savedPhase === "3") {
@@ -48,6 +50,7 @@ export function PhaseProvider({ children }: { children: React.ReactNode }) {
       setActiveIterationState(loadedIteration)
       setActivePhaseState(loadedPhase)
       useMockStore.getState().setIteration(loadedIteration)
+      setIsReady(true)
     }
   }, [])
 
@@ -64,7 +67,7 @@ export function PhaseProvider({ children }: { children: React.ReactNode }) {
       localStorage.setItem("mars_iteration", String(iteration))
     }
     useMockStore.getState().setIteration(iteration)
-    if (iteration === 2) {
+    if (iteration === 2 || iteration === 3) {
       setPhase(1)
     }
   }
@@ -74,6 +77,7 @@ export function PhaseProvider({ children }: { children: React.ReactNode }) {
       value={{
         activePhase,
         activeIteration,
+        isReady,
         setPhase,
         setIteration,
       }}

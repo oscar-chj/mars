@@ -15,6 +15,10 @@ interface MockStore {
   students2: Record<string, Student>
   logs2: SystemLog[]
 
+  claims3: Claim[]
+  students3: Record<string, Student>
+  logs3: SystemLog[]
+
   submitClaim: (
     claim: Omit<Claim, "id" | "status" | "pointsAwarded"> & { id?: string }
   ) => void
@@ -32,6 +36,9 @@ const getActiveIteration = (): number => {
       if (active === "2") {
         return 2
       }
+      if (active === "3") {
+        return 3
+      }
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
     } catch (e) {
       // Ignore localStorage error if any (e.g. security sandboxing)
@@ -41,7 +48,7 @@ const getActiveIteration = (): number => {
 }
 
 const getInitialStudents = (iteration: number): Record<string, Student> => {
-  const isIteration2 = iteration === 2
+  const isIteration2 = iteration === 2 || iteration === 3
   return {
     alice: {
       id: "alice",
@@ -214,6 +221,10 @@ export const useMockStore = create<MockStore>()(
       students2: getInitialStudents(2),
       logs2: getInitialLogs(),
 
+      claims3: getInitialClaims(),
+      students3: getInitialStudents(2),
+      logs3: getInitialLogs(),
+
       claims: getInitialClaims(),
       students: getInitialStudents(getActiveIteration()),
       logs: getInitialLogs(),
@@ -251,7 +262,14 @@ export const useMockStore = create<MockStore>()(
           const newClaims = [newClaim, ...state.claims]
           const newLogs = [newLog, ...state.logs]
 
-          if (activeIteration === 2) {
+          if (activeIteration === 3) {
+            return {
+              claims: newClaims,
+              logs: newLogs,
+              claims3: newClaims,
+              logs3: newLogs,
+            }
+          } else if (activeIteration === 2) {
             return {
               claims: newClaims,
               logs: newLogs,
@@ -309,7 +327,16 @@ export const useMockStore = create<MockStore>()(
           const newLogs = [newLog, ...state.logs]
 
           const activeIteration = getActiveIteration()
-          if (activeIteration === 2) {
+          if (activeIteration === 3) {
+            return {
+              claims: updatedClaims,
+              students: updatedStudents,
+              logs: newLogs,
+              claims3: updatedClaims,
+              students3: updatedStudents,
+              logs3: newLogs,
+            }
+          } else if (activeIteration === 2) {
             return {
               claims: updatedClaims,
               students: updatedStudents,
@@ -362,7 +389,14 @@ export const useMockStore = create<MockStore>()(
           const newLogs = [newLog, ...state.logs]
 
           const activeIteration = getActiveIteration()
-          if (activeIteration === 2) {
+          if (activeIteration === 3) {
+            return {
+              claims: updatedClaims,
+              logs: newLogs,
+              claims3: updatedClaims,
+              logs3: newLogs,
+            }
+          } else if (activeIteration === 2) {
             return {
               claims: updatedClaims,
               logs: newLogs,
@@ -383,7 +417,12 @@ export const useMockStore = create<MockStore>()(
         set((state) => {
           const newLogs = [log, ...state.logs]
           const activeIteration = getActiveIteration()
-          if (activeIteration === 2) {
+          if (activeIteration === 3) {
+            return {
+              logs: newLogs,
+              logs3: newLogs,
+            }
+          } else if (activeIteration === 2) {
             return {
               logs: newLogs,
               logs2: newLogs,
@@ -399,7 +438,19 @@ export const useMockStore = create<MockStore>()(
       resetStore: () =>
         set(() => {
           const activeIteration = getActiveIteration()
-          if (activeIteration === 2) {
+          if (activeIteration === 3) {
+            const initialClaims = getInitialClaims()
+            const initialStudents = getInitialStudents(2)
+            const initialLogs = getInitialLogs()
+            return {
+              claims: initialClaims,
+              students: initialStudents,
+              logs: initialLogs,
+              claims3: initialClaims,
+              students3: initialStudents,
+              logs3: initialLogs,
+            }
+          } else if (activeIteration === 2) {
             const initialClaims = getInitialClaims()
             const initialStudents = getInitialStudents(2)
             const initialLogs = getInitialLogs()
@@ -436,7 +487,13 @@ export const useMockStore = create<MockStore>()(
           }
         }
         set((state) => {
-          if (iteration === 2) {
+          if (iteration === 3) {
+            return {
+              claims: state.claims3,
+              students: state.students3,
+              logs: state.logs3,
+            }
+          } else if (iteration === 2) {
             return {
               claims: state.claims2,
               students: state.students2,

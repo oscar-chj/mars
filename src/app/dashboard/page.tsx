@@ -142,14 +142,14 @@ export default function StudentDashboardPage() {
         id: "alice",
         name: "Alice Chen",
         email: "alice@student.edu",
-        matricNumber: activeIteration === 2 ? "BC223014" : "U2320491A",
+        matricNumber: activeIteration === 2 || activeIteration === 3 ? "BC223014" : "U2320491A",
         points: 120,
       }
     : store.students["alice"] || {
         id: "alice",
         name: "Alice Chen",
         email: "alice@student.edu",
-        matricNumber: activeIteration === 2 ? "BC223014" : "U2320491A",
+        matricNumber: activeIteration === 2 || activeIteration === 3 ? "BC223014" : "U2320491A",
         points: 120,
       }
 
@@ -158,7 +158,9 @@ export default function StudentDashboardPage() {
     : store.claims.filter((c) => c.studentId === "alice")
 
   // Calculated Stats
-  const totalPoints = activeStudent.points
+  const totalPoints = claimsList
+    .filter((c) => c.status === "APPROVED" && c.pointsAwarded !== null)
+    .reduce((sum, c) => sum + (c.pointsAwarded ?? 0), 0)
   const pendingCount = claimsList.filter((c) => c.status === "PENDING").length
   const approvedCount = claimsList.filter((c) => c.status === "APPROVED").length
 
@@ -181,7 +183,7 @@ export default function StudentDashboardPage() {
     e.preventDefault()
 
     const formattedDate =
-      activeIteration === 2
+      activeIteration === 2 || activeIteration === 3
         ? selectedDate
           ? format(selectedDate, "yyyy-MM-dd")
           : ""
@@ -357,7 +359,7 @@ export default function StudentDashboardPage() {
 
               <div className="flex flex-col space-y-2">
                 <Label htmlFor="date">Date</Label>
-                {activeIteration === 2 ? (
+                {activeIteration === 2 || activeIteration === 3 ? (
                   <Popover>
                     <PopoverTrigger asChild>
                       <Button
@@ -442,7 +444,7 @@ export default function StudentDashboardPage() {
                 </DialogClose>
                 <Button
                   type="submit"
-                  disabled={activeIteration === 2 && !selectedDate}
+                  disabled={(activeIteration === 2 || activeIteration === 3) && !selectedDate}
                   className="cursor-pointer"
                 >
                   Submit Claim

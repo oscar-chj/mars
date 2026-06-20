@@ -1,12 +1,6 @@
 "use client"
 
-import { ArrowLeft, Award, Crown, Medal, Shield } from "lucide-react"
-import Link from "next/link"
-import { useSearchParams } from "next/navigation"
-import { Suspense, useEffect, useState } from "react"
-
 import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
 import {
   Card,
   CardContent,
@@ -25,6 +19,9 @@ import {
 import { usePhase } from "@/context/PhaseContext"
 import { cn } from "@/lib/utils"
 import { useMockStore } from "@/store/useMockStore"
+import { Award, Crown, Medal, Shield } from "lucide-react"
+import { useSearchParams } from "next/navigation"
+import { Suspense, useEffect, useState } from "react"
 
 interface LeaderboardEntry {
   rank: number
@@ -88,7 +85,7 @@ function LeaderboardContent() {
   const isPhase1Claims = activePhase === 1
 
   const formatMatric = (matric: string) => {
-    if (activeIteration !== 2) return matric
+    if (activeIteration !== 2 && activeIteration !== 3) return matric
     if (matric === "U2320491A") return "BC223014"
     if (matric === "U2320555D") return "BC223055"
     if (matric === "U2320999E") return "BC223099"
@@ -137,21 +134,15 @@ function LeaderboardContent() {
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">
-            {activeIteration === 2 ? "Rankings" : "Student Leaderboard"}
+            {activeIteration === 2 || activeIteration === 3
+              ? "Leaderboard"
+              : "Student Leaderboard"}
           </h1>
           <p className="mt-1 text-muted-foreground">
             Track top performers and see where you stand in the Community Merits
             program.
           </p>
         </div>
-
-        {/* Back to Dashboard Button */}
-        <Button variant="outline" asChild className="cursor-pointer">
-          <Link href={isAdmin ? "/admin/claims" : "/dashboard"}>
-            <ArrowLeft className="h-4 w-4" />
-            <span>Back to {isAdmin ? "Admin Portal" : "Dashboard"}</span>
-          </Link>
-        </Button>
       </div>
 
       {/* Admin Notice Banner */}

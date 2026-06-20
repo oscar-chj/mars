@@ -21,7 +21,7 @@ import { cn } from "@/lib/utils"
 export function Header() {
   const pathname = usePathname()
   const searchParams = useSearchParams()
-  const { activePhase, activeIteration, setPhase, setIteration } = usePhase()
+  const { activePhase, activeIteration, isReady, setPhase, setIteration } = usePhase()
 
   if (pathname === "/") {
     return null
@@ -62,10 +62,22 @@ export function Header() {
           >
             <Award className="h-5 w-5 text-primary" />
             <span className="hidden sm:inline">
-              {activeIteration === 1 ? "Community Merits" : "MARS Portal"}
+              {!isReady ? (
+                <span className="invisible">Community Merits</span>
+              ) : activeIteration === 1 ? (
+                "Community Merits"
+              ) : (
+                "MARS Portal"
+              )}
             </span>
             <span className="sm:hidden">
-              {activeIteration === 1 ? "Merits" : "MARS"}
+              {!isReady ? (
+                <span className="invisible">Merits</span>
+              ) : activeIteration === 1 ? (
+                "Merits"
+              ) : (
+                "MARS"
+              )}
             </span>
           </Link>
 
@@ -94,113 +106,168 @@ export function Header() {
         {/* Controls: Switchers */}
         <div className="flex items-center gap-2 sm:gap-4">
           {/* Phase Switcher */}
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button
-                variant="outline"
-                size="sm"
-                className="flex h-9 cursor-pointer items-center gap-2 px-3"
-              >
-                <span className="text-xs font-semibold">
-                  v{activeIteration}.{activePhase}
-                </span>
-                <ChevronDown className="h-4 w-4 opacity-50" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-24 min-w-24">
-              <DropdownMenuSub>
-                <DropdownMenuSubTrigger className="cursor-pointer font-medium">
-                  v1.0
-                </DropdownMenuSubTrigger>
-                <DropdownMenuPortal>
-                  <DropdownMenuSubContent className="w-20 min-w-20">
-                    <DropdownMenuItem
-                      className="cursor-pointer"
-                      onClick={() => {
-                        setIteration(1)
-                        setPhase(1)
-                      }}
-                    >
-                      <span className="flex-1">v1.1</span>
-                      {activeIteration === 1 && activePhase === 1 && (
-                        <span className="h-1.5 w-1.5 rounded-full bg-primary" />
-                      )}
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                      className="cursor-pointer"
-                      onClick={() => {
-                        setIteration(1)
-                        setPhase(2)
-                      }}
-                    >
-                      <span className="flex-1">v1.2</span>
-                      {activeIteration === 1 && activePhase === 2 && (
-                        <span className="h-1.5 w-1.5 rounded-full bg-primary" />
-                      )}
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                      className="cursor-pointer"
-                      onClick={() => {
-                        setIteration(1)
-                        setPhase(3)
-                      }}
-                    >
-                      <span className="flex-1">v1.3</span>
-                      {activeIteration === 1 && activePhase === 3 && (
-                        <span className="h-1.5 w-1.5 rounded-full bg-primary" />
-                      )}
-                    </DropdownMenuItem>
-                  </DropdownMenuSubContent>
-                </DropdownMenuPortal>
-              </DropdownMenuSub>
+          {!isReady ? (
+            <Button
+              variant="outline"
+              size="sm"
+              disabled
+              className="w-16 h-9 animate-pulse bg-muted"
+            />
+          ) : (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="flex h-9 cursor-pointer items-center gap-2 px-3"
+                >
+                  <span className="text-xs font-semibold">
+                    v{activeIteration}.{activePhase}
+                  </span>
+                  <ChevronDown className="h-4 w-4 opacity-50" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-24 min-w-24">
+                <DropdownMenuSub>
+                  <DropdownMenuSubTrigger className="cursor-pointer font-medium">
+                    v1.0
+                  </DropdownMenuSubTrigger>
+                  <DropdownMenuPortal>
+                    <DropdownMenuSubContent className="w-20 min-w-20">
+                      <DropdownMenuItem
+                        className="cursor-pointer"
+                        onClick={() => {
+                          setIteration(1)
+                          setPhase(1)
+                        }}
+                      >
+                        <span className="flex-1">v1.1</span>
+                        {activeIteration === 1 && activePhase === 1 && (
+                          <span className="h-1.5 w-1.5 rounded-full bg-primary" />
+                        )}
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        className="cursor-pointer"
+                        onClick={() => {
+                          setIteration(1)
+                          setPhase(2)
+                        }}
+                      >
+                        <span className="flex-1">v1.2</span>
+                        {activeIteration === 1 && activePhase === 2 && (
+                          <span className="h-1.5 w-1.5 rounded-full bg-primary" />
+                        )}
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        className="cursor-pointer"
+                        onClick={() => {
+                          setIteration(1)
+                          setPhase(3)
+                        }}
+                      >
+                        <span className="flex-1">v1.3</span>
+                        {activeIteration === 1 && activePhase === 3 && (
+                          <span className="h-1.5 w-1.5 rounded-full bg-primary" />
+                        )}
+                      </DropdownMenuItem>
+                    </DropdownMenuSubContent>
+                  </DropdownMenuPortal>
+                </DropdownMenuSub>
 
-              <DropdownMenuSub>
-                <DropdownMenuSubTrigger className="cursor-pointer font-medium">
-                  v2.0
-                </DropdownMenuSubTrigger>
-                <DropdownMenuPortal>
-                  <DropdownMenuSubContent className="w-20 min-w-20">
-                    <DropdownMenuItem
-                      className="cursor-pointer"
-                      onClick={() => {
-                        setIteration(2)
-                        setPhase(1)
-                      }}
-                    >
-                      <span className="flex-1">v2.1</span>
-                      {activeIteration === 2 && activePhase === 1 && (
-                        <span className="h-1.5 w-1.5 rounded-full bg-primary" />
-                      )}
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                      className="cursor-pointer"
-                      onClick={() => {
-                        setIteration(2)
-                        setPhase(2)
-                      }}
-                    >
-                      <span className="flex-1">v2.2</span>
-                      {activeIteration === 2 && activePhase === 2 && (
-                        <span className="h-1.5 w-1.5 rounded-full bg-primary" />
-                      )}
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                      className="cursor-pointer"
-                      onClick={() => {
-                        setIteration(2) // internally resets phase to 1
-                        setPhase(3) // override to v2.3; batched with above in React 18
-                      }}
-                    >
-                      <span className="flex-1">v2.3</span>
-                      {activeIteration === 2 && activePhase === 3 && (
-                        <span className="h-1.5 w-1.5 rounded-full bg-primary" />
-                      )}
-                    </DropdownMenuItem>
-                  </DropdownMenuSubContent>
-                </DropdownMenuPortal>
-              </DropdownMenuSub>
-            </DropdownMenuContent>
-          </DropdownMenu>
+                <DropdownMenuSub>
+                  <DropdownMenuSubTrigger className="cursor-pointer font-medium">
+                    v2.0
+                  </DropdownMenuSubTrigger>
+                  <DropdownMenuPortal>
+                    <DropdownMenuSubContent className="w-20 min-w-20">
+                      <DropdownMenuItem
+                        className="cursor-pointer"
+                        onClick={() => {
+                          setIteration(2)
+                          setPhase(1)
+                        }}
+                      >
+                        <span className="flex-1">v2.1</span>
+                        {activeIteration === 2 && activePhase === 1 && (
+                          <span className="h-1.5 w-1.5 rounded-full bg-primary" />
+                        )}
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        className="cursor-pointer"
+                        onClick={() => {
+                          setIteration(2)
+                          setPhase(2)
+                        }}
+                      >
+                        <span className="flex-1">v2.2</span>
+                        {activeIteration === 2 && activePhase === 2 && (
+                          <span className="h-1.5 w-1.5 rounded-full bg-primary" />
+                        )}
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        className="cursor-pointer"
+                        onClick={() => {
+                          setIteration(2) // internally resets phase to 1
+                          setPhase(3) // override to v2.3; batched with above in React 18
+                        }}
+                      >
+                        <span className="flex-1">v2.3</span>
+                        {activeIteration === 2 && activePhase === 3 && (
+                          <span className="h-1.5 w-1.5 rounded-full bg-primary" />
+                        )}
+                      </DropdownMenuItem>
+                    </DropdownMenuSubContent>
+                  </DropdownMenuPortal>
+                </DropdownMenuSub>
+
+                <DropdownMenuSub>
+                  <DropdownMenuSubTrigger className="cursor-pointer font-medium">
+                    v3.0
+                  </DropdownMenuSubTrigger>
+                  <DropdownMenuPortal>
+                    <DropdownMenuSubContent className="w-20 min-w-20">
+                      <DropdownMenuItem
+                        className="cursor-pointer"
+                        onClick={() => {
+                          setIteration(3)
+                          setPhase(1)
+                        }}
+                      >
+                        <span className="flex-1">v3.1</span>
+                        {activeIteration === 3 && activePhase === 1 && (
+                          <span className="h-1.5 w-1.5 rounded-full bg-primary" />
+                        )}
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        className="cursor-pointer"
+                        onClick={() => {
+                          setIteration(3)
+                          setPhase(2)
+                        }}
+                      >
+                        <span className="flex-1">v3.2</span>
+                        {activeIteration === 3 && activePhase === 2 && (
+                          <span className="h-1.5 w-1.5 rounded-full bg-primary" />
+                        )}
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        className="cursor-pointer"
+                        onClick={() => {
+                          setIteration(3)
+                          setPhase(3)
+                        }}
+                      >
+                        <span className="flex-1">v3.3</span>
+                        {activeIteration === 3 && activePhase === 3 && (
+                          <span className="h-1.5 w-1.5 rounded-full bg-primary" />
+                        )}
+                      </DropdownMenuItem>
+                    </DropdownMenuSubContent>
+                  </DropdownMenuPortal>
+                </DropdownMenuSub>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
 
           {/* Role Switcher */}
           <DropdownMenu>
