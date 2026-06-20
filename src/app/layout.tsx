@@ -1,8 +1,12 @@
 import { Geist, Geist_Mono, Inter } from "next/font/google"
+import { Suspense } from "react"
 
 import "./globals.css"
 import { ThemeProvider } from "@/components/theme-provider"
 import { cn } from "@/lib/utils";
+import { Header } from "@/components/prototype/header"
+
+import { PhaseProvider } from "@/context/PhaseContext"
 
 const inter = Inter({subsets:['latin'],variable:'--font-sans'})
 
@@ -23,7 +27,16 @@ export default function RootLayout({
       className={cn("antialiased", fontMono.variable, "font-sans", inter.variable)}
     >
       <body>
-        <ThemeProvider>{children}</ThemeProvider>
+        <ThemeProvider>
+          <PhaseProvider>
+            <div className="flex min-h-screen flex-col">
+              <Suspense fallback={<div className="h-16 border-b border-border bg-background" />}>
+                <Header />
+              </Suspense>
+              <main className="flex-1">{children}</main>
+            </div>
+          </PhaseProvider>
+        </ThemeProvider>
       </body>
     </html>
   )
