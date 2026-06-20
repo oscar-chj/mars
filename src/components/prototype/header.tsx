@@ -9,17 +9,26 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuPortal,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { cn } from "@/lib/utils"
 import { usePhase } from "@/context/PhaseContext"
+import { cn } from "@/lib/utils"
 
 export function Header() {
   const pathname = usePathname()
   const searchParams = useSearchParams()
-  const { activePhase, setPhase } = usePhase()
-  
-  const isAdmin = pathname.startsWith("/admin") || searchParams.get("role") === "admin"
+  const { activePhase, activeIteration, setPhase, setIteration } = usePhase()
+
+  if (pathname === "/") {
+    return null
+  }
+
+  const isAdmin =
+    pathname.startsWith("/admin") || searchParams.get("role") === "admin"
 
   const isActive = (path: string) => {
     if (path === "/leaderboard?role=admin") {
@@ -34,7 +43,7 @@ export function Header() {
   const navLinks = isAdmin
     ? [
         { label: "Claims Queue", href: "/admin/claims" },
-        { label: "Audit Logs", href: "/admin/logs" },
+        { label: "System Logs", href: "/admin/logs" },
         { label: "Leaderboard", href: "/leaderboard?role=admin" },
       ]
     : [
@@ -49,11 +58,15 @@ export function Header() {
         <div className="flex items-center gap-6 md:gap-10">
           <Link
             href={isAdmin ? "/admin/claims" : "/dashboard"}
-            className="flex items-center gap-2 font-bold tracking-tight text-foreground transition-opacity hover:opacity-90 shrink-0"
+            className="flex shrink-0 items-center gap-2 font-bold tracking-tight text-foreground transition-opacity hover:opacity-90"
           >
             <Award className="h-5 w-5 text-primary" />
-            <span className="hidden sm:inline">Community Merits</span>
-            <span className="sm:hidden">Merits</span>
+            <span className="hidden sm:inline">
+              {activeIteration === 1 ? "Community Merits" : "MARS Portal"}
+            </span>
+            <span className="sm:hidden">
+              {activeIteration === 1 ? "Merits" : "MARS"}
+            </span>
           </Link>
 
           {/* Navigation Links */}
@@ -66,7 +79,9 @@ export function Header() {
                   href={link.href}
                   className={cn(
                     "text-sm font-medium transition-colors hover:text-foreground/80",
-                    active ? "text-foreground font-semibold" : "text-muted-foreground"
+                    active
+                      ? "font-semibold text-foreground"
+                      : "text-muted-foreground"
                   )}
                 >
                   {link.label}
@@ -84,25 +99,106 @@ export function Header() {
               <Button
                 variant="outline"
                 size="sm"
-                className="flex items-center gap-2 cursor-pointer h-9"
+                className="flex h-9 cursor-pointer items-center gap-2 px-3"
               >
-                <span className="text-xs font-semibold">Phase {activePhase}</span>
+                <span className="text-xs font-semibold">
+                  v{activeIteration}.{activePhase}
+                </span>
                 <ChevronDown className="h-4 w-4 opacity-50" />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-52">
-              <DropdownMenuItem className="cursor-pointer" onClick={() => setPhase(1)}>
-                <span className="flex-1">Phase 1: Static UI</span>
-                {activePhase === 1 && <span className="h-1.5 w-1.5 rounded-full bg-primary" />}
-              </DropdownMenuItem>
-              <DropdownMenuItem className="cursor-pointer" onClick={() => setPhase(2)}>
-                <span className="flex-1">Phase 2: Zustand Sync</span>
-                {activePhase === 2 && <span className="h-1.5 w-1.5 rounded-full bg-primary" />}
-              </DropdownMenuItem>
-              <DropdownMenuItem className="cursor-pointer" onClick={() => setPhase(3)}>
-                <span className="flex-1">Phase 3: LocalStorage Persist</span>
-                {activePhase === 3 && <span className="h-1.5 w-1.5 rounded-full bg-primary" />}
-              </DropdownMenuItem>
+            <DropdownMenuContent align="end" className="w-24 min-w-24">
+              <DropdownMenuSub>
+                <DropdownMenuSubTrigger className="cursor-pointer font-medium">
+                  v1.0
+                </DropdownMenuSubTrigger>
+                <DropdownMenuPortal>
+                  <DropdownMenuSubContent className="w-20 min-w-20">
+                    <DropdownMenuItem
+                      className="cursor-pointer"
+                      onClick={() => {
+                        setIteration(1)
+                        setPhase(1)
+                      }}
+                    >
+                      <span className="flex-1">v1.1</span>
+                      {activeIteration === 1 && activePhase === 1 && (
+                        <span className="h-1.5 w-1.5 rounded-full bg-primary" />
+                      )}
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      className="cursor-pointer"
+                      onClick={() => {
+                        setIteration(1)
+                        setPhase(2)
+                      }}
+                    >
+                      <span className="flex-1">v1.2</span>
+                      {activeIteration === 1 && activePhase === 2 && (
+                        <span className="h-1.5 w-1.5 rounded-full bg-primary" />
+                      )}
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      className="cursor-pointer"
+                      onClick={() => {
+                        setIteration(1)
+                        setPhase(3)
+                      }}
+                    >
+                      <span className="flex-1">v1.3</span>
+                      {activeIteration === 1 && activePhase === 3 && (
+                        <span className="h-1.5 w-1.5 rounded-full bg-primary" />
+                      )}
+                    </DropdownMenuItem>
+                  </DropdownMenuSubContent>
+                </DropdownMenuPortal>
+              </DropdownMenuSub>
+
+              <DropdownMenuSub>
+                <DropdownMenuSubTrigger className="cursor-pointer font-medium">
+                  v2.0
+                </DropdownMenuSubTrigger>
+                <DropdownMenuPortal>
+                  <DropdownMenuSubContent className="w-20 min-w-20">
+                    <DropdownMenuItem
+                      className="cursor-pointer"
+                      onClick={() => {
+                        setIteration(2)
+                        setPhase(1)
+                      }}
+                    >
+                      <span className="flex-1">v2.1</span>
+                      {activeIteration === 2 && activePhase === 1 && (
+                        <span className="h-1.5 w-1.5 rounded-full bg-primary" />
+                      )}
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      className="cursor-pointer"
+                      onClick={() => {
+                        setIteration(2)
+                        setPhase(2)
+                      }}
+                    >
+                      <span className="flex-1">v2.2</span>
+                      {activeIteration === 2 && activePhase === 2 && (
+                        <span className="h-1.5 w-1.5 rounded-full bg-primary" />
+                      )}
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      className="cursor-pointer"
+                      onClick={() => {
+                        setIteration(2) // internally resets phase to 1
+                        setPhase(3) // override to v2.3; batched with above in React 18
+                      }}
+                    >
+                      <span className="flex-1">v2.3</span>
+                      {activeIteration === 2 && activePhase === 3 && (
+                        <span className="h-1.5 w-1.5 rounded-full bg-primary" />
+                      )}
+                    </DropdownMenuItem>
+                  </DropdownMenuSubContent>
+                </DropdownMenuPortal>
+              </DropdownMenuSub>
             </DropdownMenuContent>
           </DropdownMenu>
 
@@ -112,7 +208,7 @@ export function Header() {
               <Button
                 variant="outline"
                 size="sm"
-                className="flex items-center gap-2 cursor-pointer h-9"
+                className="flex h-9 cursor-pointer items-center gap-2"
               >
                 {isAdmin ? (
                   <>
@@ -130,15 +226,25 @@ export function Header() {
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-48">
               <DropdownMenuItem asChild>
-                <Link href="/dashboard" className="w-full flex items-center justify-between">
+                <Link
+                  href="/dashboard"
+                  className="flex w-full items-center justify-between"
+                >
                   <span>Student (Alice)</span>
-                  {!isAdmin && <span className="h-1.5 w-1.5 rounded-full bg-primary" />}
+                  {!isAdmin && (
+                    <span className="h-1.5 w-1.5 rounded-full bg-primary" />
+                  )}
                 </Link>
               </DropdownMenuItem>
               <DropdownMenuItem asChild>
-                <Link href="/admin/claims" className="w-full flex items-center justify-between">
+                <Link
+                  href="/admin/claims"
+                  className="flex w-full items-center justify-between"
+                >
                   <span>Admin</span>
-                  {isAdmin && <span className="h-1.5 w-1.5 rounded-full bg-primary" />}
+                  {isAdmin && (
+                    <span className="h-1.5 w-1.5 rounded-full bg-primary" />
+                  )}
                 </Link>
               </DropdownMenuItem>
             </DropdownMenuContent>

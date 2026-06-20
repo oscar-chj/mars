@@ -4,7 +4,7 @@ import React, { createContext, useContext, useState, useEffect } from "react"
 import { useMockStore } from "@/store/useMockStore"
 
 export type Phase = 1 | 2 | 3
-export type Iteration = 1
+export type Iteration = 1 | 2
 
 export interface PhaseContextType {
   activePhase: Phase
@@ -16,8 +16,8 @@ export interface PhaseContextType {
 const PhaseContext = createContext<PhaseContextType | undefined>(undefined)
 
 export function PhaseProvider({ children }: { children: React.ReactNode }) {
+  const [activeIteration, setActiveIterationState] = useState<Iteration>(1)
   const [activePhase, setActivePhaseState] = useState<Phase>(3)
-  const activeIteration: Iteration = 1
 
   useEffect(() => {
     if (activePhase === 2) {
@@ -27,10 +27,27 @@ export function PhaseProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     if (typeof window !== "undefined") {
+      const savedIteration = localStorage.getItem("mars_iteration")
       const savedPhase = localStorage.getItem("mars_phase")
-      if (savedPhase === "1" || savedPhase === "2" || savedPhase === "3") {
-        setActivePhaseState(Number(savedPhase) as Phase)
+
+      let loadedIteration: Iteration = 1
+      let loadedPhase: Phase = 3
+
+      if (savedIteration === "1" || savedIteration === "2") {
+        loadedIteration = Number(savedIteration) as Iteration
       }
+      if (savedPhase === "1" || savedPhase === "2" || savedPhase === "3") {
+        loadedPhase = Number(savedPhase) as Phase
+      }
+
+      if (loadedPhase === 2) {
+        useMockStore.getState().resetStore()
+      }
+
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setActiveIterationState(loadedIteration)
+      setActivePhaseState(loadedPhase)
+      useMockStore.getState().setIteration(loadedIteration)
     }
   }, [])
 
@@ -42,7 +59,14 @@ export function PhaseProvider({ children }: { children: React.ReactNode }) {
   }
 
   const setIteration = (iteration: Iteration) => {
-    // No-op for Iteration 1 lock
+    setActiveIterationState(iteration)
+    if (typeof window !== "undefined") {
+      localStorage.setItem("mars_iteration", String(iteration))
+    }
+    useMockStore.getState().setIteration(iteration)
+    if (iteration === 2) {
+      setPhase(1)
+    }
   }
 
   return (

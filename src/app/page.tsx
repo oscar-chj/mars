@@ -1,119 +1,61 @@
+import { Card } from "@/components/ui/card"
+import { ArrowRight, GraduationCap, Shield } from "lucide-react"
 import Link from "next/link"
-import { Award, Shield, User, ArrowRight, CheckCircle, Trophy, BookOpen } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import {
-  Card,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-  CardContent,
-  CardFooter,
-} from "@/components/ui/card"
 
 export default function Page() {
   return (
-    <div className="flex flex-col items-center justify-center min-h-[calc(100vh-4rem)] bg-background">
+    <div className="relative flex flex-col items-center justify-center min-h-[calc(100vh-4rem)] bg-background overflow-hidden py-12">
+      {/* Decorative background grid and ambient glows */}
+      <div className="absolute inset-0 bg-[linear-gradient(to_right,#8080800a_1px,transparent_1px),linear-gradient(to_bottom,#8080800a_1px,transparent_1px)] bg-[size:14px_24px] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,#000_70%,transparent_100%)] pointer-events-none" />
+
       {/* Hero / Explanation Section */}
-      <div className="max-w-4xl px-4 py-12 mx-auto text-center md:py-20">
-        <div className="inline-flex items-center justify-center p-2 mb-6 rounded-full bg-primary/10 text-primary">
-          <Award className="w-8 h-8" />
-        </div>
-        <h1 className="text-4xl font-extrabold tracking-tight sm:text-5xl md:text-6xl text-foreground">
-          Community Merits Platform
+      <div className="relative max-w-4xl px-6 py-8 mx-auto text-center md:py-16 z-10 animate-in fade-in slide-in-from-top-4 duration-500">
+        <h1 className="text-4xl font-extrabold tracking-tight py-4 sm:text-5xl md:text-6xl text-foreground">
+          MARS
         </h1>
-        <p className="max-w-2xl mx-auto mt-6 text-lg text-muted-foreground sm:text-xl">
-          Recognizing and celebrating student contributions. Log community service, track achievements, earn merits, and inspire excellence within our institution via the Community Merits platform.
+        <p className="max-w-xl mx-auto text-sm sm:text-base leading-relaxed">
+          Merit Activity Records System
+        </p>
+        <p className="max-w-xl mx-auto text-muted-foreground text-sm sm:text-base leading-relaxed">
+          Log community service hours, submit verifiable activity claims, earn merit awards, and track student achievements.
         </p>
       </div>
 
       {/* Cards Section */}
-      <div className="grid w-full max-w-5xl gap-8 px-4 pb-16 mx-auto sm:grid-cols-2">
+      <div className="relative grid w-full max-w-3xl gap-6 px-6 mx-auto sm:grid-cols-2 z-10 pb-16 animate-in fade-in slide-in-from-bottom-4 duration-500 delay-150">
         {/* Student Portal Card */}
-        <Card className="flex flex-col justify-between transition-all border shadow-sm hover:shadow-md hover:border-primary/20">
-          <CardHeader className="flex flex-row items-center gap-4">
-            <div className="p-3 rounded-2xl bg-primary/10 text-primary">
-              <User className="w-6 h-6" />
+        <Link href="/dashboard" className="group block h-full">
+          <Card className="relative flex flex-col justify-between p-6 h-full transition-all border border-border/80 bg-card hover:bg-muted/10 hover:border-primary/20 shadow-xs hover:shadow-md rounded-2xl cursor-pointer overflow-hidden">
+            <div className="space-y-5">
+              {/* Icon with colored background */}
+              <GraduationCap className="w-6 h-6" />
+                <h3 className="text-xl font-bold tracking-tight text-foreground">Student Portal</h3>
+                <p className="text-sm text-muted-foreground leading-relaxed">
+                  Log your service activities, upload proof certificates, and track your merit standing.
+                </p>
             </div>
-            <div>
-              <CardTitle className="text-xl font-bold">Student Portal</CardTitle>
-              <CardDescription>View and submit merit claims</CardDescription>
-            </div>
-          </CardHeader>
-          <CardContent className="flex-1">
-            <p className="text-muted-foreground">
-              Access your personal dashboard to track cumulative merit points, submit new claims with proof certificates, and view your current position on the student leaderboard.
-            </p>
-          </CardContent>
-          <CardFooter className="pt-4 border-t border-border/50">
-            <Button asChild className="w-full justify-between cursor-pointer" size="lg">
-              <Link href="/dashboard">
-                <span>Enter Student Portal</span>
-                <ArrowRight className="w-4 h-4" />
-              </Link>
-            </Button>
-          </CardFooter>
-        </Card>
+            
+            {/* Card Action Link Footer */}
+            <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-0.5 duration-300" />
+          </Card>
+        </Link>
 
         {/* Admin Portal Card */}
-        <Card className="flex flex-col justify-between transition-all border shadow-sm hover:shadow-md hover:border-primary/20">
-          <CardHeader className="flex flex-row items-center gap-4">
-            <div className="p-3 rounded-2xl bg-primary/10 text-primary">
+        <Link href="/admin/claims" className="group block h-full">
+          <Card className="relative flex flex-col justify-between p-6 h-full transition-all border border-border/80 bg-card hover:bg-muted/10 hover:border-primary/20 shadow-xs hover:shadow-md rounded-2xl cursor-pointer overflow-hidden">
+            <div className="space-y-5">
+              {/* Icon with user inside shield */}
               <Shield className="w-6 h-6" />
-            </div>
-            <div>
-              <CardTitle className="text-xl font-bold">Admin Portal</CardTitle>
-              <CardDescription>Review and verify claims</CardDescription>
-            </div>
-          </CardHeader>
-          <CardContent className="flex-1">
-            <p className="text-muted-foreground">
-              Review pending community merit claims in real-time, inspect certificate uploads, allocate points, and monitor the audit logs and simulated email logs.
-            </p>
-          </CardContent>
-          <CardFooter className="pt-4 border-t border-border/50">
-            <Button asChild variant="outline" className="w-full justify-between cursor-pointer" size="lg">
-              <Link href="/admin/claims">
-                <span>Enter Admin Portal</span>
-                <ArrowRight className="w-4 h-4" />
-              </Link>
-            </Button>
-          </CardFooter>
-        </Card>
-      </div>
-
-      {/* Info / Feature Highlights */}
-      <div className="w-full border-t border-border bg-muted/30 py-12 md:py-16">
-        <div className="max-w-5xl px-4 mx-auto">
-          <div className="grid gap-8 sm:grid-cols-3">
-            <div className="flex flex-col items-center text-center">
-              <div className="flex items-center justify-center w-12 h-12 mb-4 rounded-xl bg-background border shadow-xs text-primary">
-                <BookOpen className="w-5 h-5" />
-              </div>
-              <h3 className="font-semibold text-foreground">Log Activities</h3>
-              <p className="mt-2 text-sm text-muted-foreground">
-                Document volunteer service, cultural participations, athletic feats, and academic achievements.
+              <h3 className="text-xl font-bold tracking-tight text-foreground">Admin Portal</h3>
+              <p className="text-sm text-muted-foreground leading-relaxed">
+                Review student claims, allocate merit points, and monitor system transaction logs.
               </p>
             </div>
-            <div className="flex flex-col items-center text-center">
-              <div className="flex items-center justify-center w-12 h-12 mb-4 rounded-xl bg-background border shadow-xs text-primary">
-                <CheckCircle className="w-5 h-5" />
-              </div>
-              <h3 className="font-semibold text-foreground">Verifiable Claims</h3>
-              <p className="mt-2 text-sm text-muted-foreground">
-                Admin review process ensures all submissions are backed by valid evidence, maintaining system integrity.
-              </p>
-            </div>
-            <div className="flex flex-col items-center text-center">
-              <div className="flex items-center justify-center w-12 h-12 mb-4 rounded-xl bg-background border shadow-xs text-primary">
-                <Trophy className="w-5 h-5" />
-              </div>
-              <h3 className="font-semibold text-foreground">Public Leaderboard</h3>
-              <p className="mt-2 text-sm text-muted-foreground">
-                See peer standings on a dynamic ranking table, encouraging robust community-minded engagement.
-              </p>
-            </div>
-          </div>
-        </div>
+            
+            {/* Card Action Link Footer */}
+            <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-0.5 duration-300" />
+          </Card>
+        </Link>
       </div>
     </div>
   )

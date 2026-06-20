@@ -1,41 +1,71 @@
+import { Claim, Student, SystemLog } from "@/types/claims"
 import { create } from "zustand"
 import { persist } from "zustand/middleware"
-import { Claim, Student, SystemLog } from "@/types/claims"
 
 interface MockStore {
   claims: Claim[]
   students: Record<string, Student>
   logs: SystemLog[]
-  submitClaim: (claim: Omit<Claim, "id" | "status" | "pointsAwarded"> & { id?: string }) => void
+
+  claims1: Claim[]
+  students1: Record<string, Student>
+  logs1: SystemLog[]
+
+  claims2: Claim[]
+  students2: Record<string, Student>
+  logs2: SystemLog[]
+
+  submitClaim: (
+    claim: Omit<Claim, "id" | "status" | "pointsAwarded"> & { id?: string }
+  ) => void
   approveClaim: (claimId: string, points: number) => void
   rejectClaim: (claimId: string) => void
   addLog: (log: SystemLog) => void
   resetStore: () => void
+  setIteration: (iteration: number) => void
 }
 
-const getInitialStudents = (): Record<string, Student> => ({
-  alice: {
-    id: "alice",
-    name: "Alice Chen",
-    email: "alice@student.edu",
-    matricNumber: "U2320491A",
-    points: 120,
-  },
-  david: {
-    id: "david",
-    name: "David Lee",
-    email: "david@student.edu",
-    matricNumber: "U2320555D",
-    points: 0,
-  },
-  emma: {
-    id: "emma",
-    name: "Emma Stone",
-    email: "emma@student.edu",
-    matricNumber: "U2320999E",
-    points: 0,
-  },
-})
+const getActiveIteration = (): number => {
+  if (typeof window !== "undefined") {
+    try {
+      const active = window.localStorage.getItem("mars_iteration")
+      if (active === "2") {
+        return 2
+      }
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    } catch (e) {
+      // Ignore localStorage error if any (e.g. security sandboxing)
+    }
+  }
+  return 1
+}
+
+const getInitialStudents = (iteration: number): Record<string, Student> => {
+  const isIteration2 = iteration === 2
+  return {
+    alice: {
+      id: "alice",
+      name: "Alice Chen",
+      email: "alice@student.edu",
+      matricNumber: isIteration2 ? "BC223014" : "U2320491A",
+      points: 120,
+    },
+    david: {
+      id: "david",
+      name: "David Lee",
+      email: "david@student.edu",
+      matricNumber: isIteration2 ? "BC223055" : "U2320555D",
+      points: 0,
+    },
+    emma: {
+      id: "emma",
+      name: "Emma Stone",
+      email: "emma@student.edu",
+      matricNumber: isIteration2 ? "BC223099" : "U2320999E",
+      points: 0,
+    },
+  }
+}
 
 const getInitialClaims = (): Claim[] => [
   {
@@ -176,8 +206,16 @@ const getFormattedDate = (dateObj: Date): string => {
 export const useMockStore = create<MockStore>()(
   persist(
     (set) => ({
+      claims1: getInitialClaims(),
+      students1: getInitialStudents(1),
+      logs1: getInitialLogs(),
+
+      claims2: getInitialClaims(),
+      students2: getInitialStudents(2),
+      logs2: getInitialLogs(),
+
       claims: getInitialClaims(),
-      students: getInitialStudents(),
+      students: getInitialStudents(getActiveIteration()),
       logs: getInitialLogs(),
 
       submitClaim: (claim) =>
@@ -198,22 +236,44 @@ export const useMockStore = create<MockStore>()(
             timestamp,
             eventType: "CLAIM_SUBMISSION",
             description: `Email dispatch: Claim Submission Confirmation for ${claim.eventName}`,
-            recipientEmail: claim.studentId === "alice" ? "alice@student.edu" : claim.studentId === "david" ? "david@student.edu" : "emma@student.edu",
+            recipientEmail:
+              claim.studentId === "alice"
+                ? "alice@student.edu"
+                : claim.studentId === "david"
+                  ? "david@student.edu"
+                  : "emma@student.edu",
             emailSubject: "Claim Submission Confirmation",
             emailBody: "",
             emailStatus: "DELIVERED",
           }
 
-          return {
-            claims: [newClaim, ...state.claims],
-            logs: [newLog, ...state.logs],
+          const activeIteration = getActiveIteration()
+          const newClaims = [newClaim, ...state.claims]
+          const newLogs = [newLog, ...state.logs]
+
+          if (activeIteration === 2) {
+            return {
+              claims: newClaims,
+              logs: newLogs,
+              claims2: newClaims,
+              logs2: newLogs,
+            }
+          } else {
+            return {
+              claims: newClaims,
+              logs: newLogs,
+              claims1: newClaims,
+              logs1: newLogs,
+            }
           }
         }),
 
       approveClaim: (claimId, points) =>
         set((state) => {
           const updatedClaims = state.claims.map((c) =>
-            c.id === claimId ? { ...c, status: "APPROVED" as const, pointsAwarded: points } : c
+            c.id === claimId
+              ? { ...c, status: "APPROVED" as const, pointsAwarded: points }
+              : c
           )
 
           const targetClaim = state.claims.find((c) => c.id === claimId)
@@ -238,23 +298,44 @@ export const useMockStore = create<MockStore>()(
             timestamp,
             eventType: "CLAIM_DECISION",
             description: `Email dispatch: Merit Claim Approved! (+${points} points awarded)`,
-            recipientEmail: currentStudent ? currentStudent.email : "student@student.edu",
+            recipientEmail: currentStudent
+              ? currentStudent.email
+              : "student@student.edu",
             emailSubject: "Merit Claim Approved!",
             emailBody: "",
             emailStatus: "DELIVERED",
           }
 
-          return {
-            claims: updatedClaims,
-            students: updatedStudents,
-            logs: [newLog, ...state.logs],
+          const newLogs = [newLog, ...state.logs]
+
+          const activeIteration = getActiveIteration()
+          if (activeIteration === 2) {
+            return {
+              claims: updatedClaims,
+              students: updatedStudents,
+              logs: newLogs,
+              claims2: updatedClaims,
+              students2: updatedStudents,
+              logs2: newLogs,
+            }
+          } else {
+            return {
+              claims: updatedClaims,
+              students: updatedStudents,
+              logs: newLogs,
+              claims1: updatedClaims,
+              students1: updatedStudents,
+              logs1: newLogs,
+            }
           }
         }),
 
       rejectClaim: (claimId) =>
         set((state) => {
           const updatedClaims = state.claims.map((c) =>
-            c.id === claimId ? { ...c, status: "REJECTED" as const, pointsAwarded: null } : c
+            c.id === claimId
+              ? { ...c, status: "REJECTED" as const, pointsAwarded: null }
+              : c
           )
 
           const targetClaim = state.claims.find((c) => c.id === claimId)
@@ -270,29 +351,106 @@ export const useMockStore = create<MockStore>()(
             timestamp,
             eventType: "CLAIM_DECISION",
             description: `Email dispatch: Merit Claim Status Update (Rejection notification)`,
-            recipientEmail: currentStudent ? currentStudent.email : "student@student.edu",
+            recipientEmail: currentStudent
+              ? currentStudent.email
+              : "student@student.edu",
             emailSubject: "Merit Claim Status Update",
             emailBody: "",
             emailStatus: "DELIVERED",
           }
 
-          return {
-            claims: updatedClaims,
-            logs: [newLog, ...state.logs],
+          const newLogs = [newLog, ...state.logs]
+
+          const activeIteration = getActiveIteration()
+          if (activeIteration === 2) {
+            return {
+              claims: updatedClaims,
+              logs: newLogs,
+              claims2: updatedClaims,
+              logs2: newLogs,
+            }
+          } else {
+            return {
+              claims: updatedClaims,
+              logs: newLogs,
+              claims1: updatedClaims,
+              logs1: newLogs,
+            }
           }
         }),
 
       addLog: (log) =>
-        set((state) => ({
-          logs: [log, ...state.logs],
-        })),
+        set((state) => {
+          const newLogs = [log, ...state.logs]
+          const activeIteration = getActiveIteration()
+          if (activeIteration === 2) {
+            return {
+              logs: newLogs,
+              logs2: newLogs,
+            }
+          } else {
+            return {
+              logs: newLogs,
+              logs1: newLogs,
+            }
+          }
+        }),
 
       resetStore: () =>
-        set(() => ({
-          claims: getInitialClaims(),
-          students: getInitialStudents(),
-          logs: getInitialLogs(),
-        })),
+        set(() => {
+          const activeIteration = getActiveIteration()
+          if (activeIteration === 2) {
+            const initialClaims = getInitialClaims()
+            const initialStudents = getInitialStudents(2)
+            const initialLogs = getInitialLogs()
+            return {
+              claims: initialClaims,
+              students: initialStudents,
+              logs: initialLogs,
+              claims2: initialClaims,
+              students2: initialStudents,
+              logs2: initialLogs,
+            }
+          } else {
+            const initialClaims = getInitialClaims()
+            const initialStudents = getInitialStudents(1)
+            const initialLogs = getInitialLogs()
+            return {
+              claims: initialClaims,
+              students: initialStudents,
+              logs: initialLogs,
+              claims1: initialClaims,
+              students1: initialStudents,
+              logs1: initialLogs,
+            }
+          }
+        }),
+
+      setIteration: (iteration) => {
+        if (typeof window !== "undefined") {
+          try {
+            window.localStorage.setItem("mars_iteration", String(iteration))
+            // eslint-disable-next-line @typescript-eslint/no-unused-vars
+          } catch (e) {
+            // Ignore
+          }
+        }
+        set((state) => {
+          if (iteration === 2) {
+            return {
+              claims: state.claims2,
+              students: state.students2,
+              logs: state.logs2,
+            }
+          } else {
+            return {
+              claims: state.claims1,
+              students: state.students1,
+              logs: state.logs1,
+            }
+          }
+        })
+      },
     }),
     {
       name: "mars-mock-store",

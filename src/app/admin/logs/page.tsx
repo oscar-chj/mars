@@ -1,11 +1,26 @@
 "use client"
 
-import React, { useState, useEffect } from "react"
-import { Shield, Search, Mail, AlertCircle, CheckCircle2, Clock, RotateCcw, Send, Play } from "lucide-react"
+import { CheckCircle2, Mail, Play, RotateCcw, Search, Send } from "lucide-react"
+import { useEffect, useState } from "react"
 
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import {
+  Drawer,
+  DrawerContent,
+  DrawerDescription,
+  DrawerHeader,
+  DrawerTitle,
+} from "@/components/ui/drawer"
 import { Input } from "@/components/ui/input"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import {
   Table,
   TableBody,
@@ -14,27 +29,13 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import {
-  Drawer,
-  DrawerContent,
-  DrawerDescription,
-  DrawerHeader,
-  DrawerTitle,
-} from "@/components/ui/drawer"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
-import { SystemLog } from "@/types/claims"
-import { cn } from "@/lib/utils"
 import { usePhase } from "@/context/PhaseContext"
+import { cn } from "@/lib/utils"
 import { useMockStore } from "@/store/useMockStore"
+import { SystemLog } from "@/types/claims"
 
 function EmailBodyFrame({ log }: { log: SystemLog }) {
+  const { activeIteration } = usePhase()
   const getStudentName = (email: string) => {
     if (email.includes("alice")) return "Alice Chen"
     if (email.includes("david")) return "David Lee"
@@ -47,68 +48,88 @@ function EmailBodyFrame({ log }: { log: SystemLog }) {
   const isApproval = log.emailSubject.includes("Approved")
 
   return (
-    <div className="bg-card border border-border rounded-md shadow-sm overflow-hidden w-full font-sans">
+    <div className="w-full overflow-hidden rounded-md border border-border bg-card font-sans shadow-sm">
       {/* Header Banner */}
-      <div className="bg-primary text-primary-foreground py-4 px-6 text-center font-bold tracking-wide border-b border-border text-base">
-        Community Merits Program
+      <div className="border-b border-border bg-primary px-6 py-4 text-center text-base font-bold tracking-wide text-primary-foreground">
+        {activeIteration === 2
+          ? "MARS Student Administration"
+          : "Community Merits Program"}
       </div>
 
       {/* Body Content */}
-      <div className="p-6 space-y-4 text-foreground text-sm leading-relaxed">
-        <p className="font-semibold">
-          Dear {name || "Student"},
-        </p>
+      <div className="space-y-4 p-6 text-sm leading-relaxed text-foreground">
+        <p className="font-semibold">Dear {name || "Student"},</p>
 
         {isSubmission ? (
           <>
             <p>
-              We have received your community merit claim and it is currently awaiting review by the Office of Student Affairs.
+              We have received your community merit claim and it is currently
+              awaiting review by the Office of Student Affairs.
             </p>
             <p>
-              Once the review process is complete, you will receive another update detailing the outcome of your claim.
+              Once the review process is complete, you will receive another
+              update detailing the outcome of your claim.
             </p>
             <p>
-              Thank you for your active participation and contributions to our community!
+              Thank you for your active participation and contributions to our
+              community!
             </p>
           </>
         ) : isApproval ? (
           <>
-            <p>
-              Congratulations! Your merit claim has been approved.
-            </p>
-            <div className="bg-muted/50 p-4 rounded-md border border-border/50 space-y-2 font-medium">
+            <p>Congratulations! Your merit claim has been approved.</p>
+            <div className="space-y-2 rounded-md border border-border/50 bg-muted/50 p-4 font-medium">
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Points Awarded:</span>
-                <span className="text-emerald-600 dark:text-emerald-400 font-bold">+40 Points</span>
+                <span className="font-bold text-emerald-600 dark:text-emerald-400">
+                  +40 Points
+                </span>
               </div>
               <div className="flex justify-between border-t border-border/30 pt-2">
-                <span className="text-muted-foreground">New Points Balance:</span>
-                <span className="text-foreground font-bold">120 Points</span>
+                <span className="text-muted-foreground">
+                  New Points Balance:
+                </span>
+                <span className="font-bold text-foreground">120 Points</span>
               </div>
             </div>
             <p>
-              Thank you for your dedication to community involvement and excellence.
+              Thank you for your dedication to community involvement and
+              excellence.
             </p>
           </>
         ) : (
           <>
             <p>
-              Your merit claim has been reviewed. Unfortunately, it does not meet the guidelines for this category and has been rejected.
+              Your merit claim has been reviewed. Unfortunately, it does not
+              meet the guidelines for this category and has been rejected.
             </p>
-            <div className="bg-destructive/5 text-destructive p-4 rounded-md border border-destructive/10 space-y-1">
-              <p className="font-semibold text-xs uppercase tracking-wider">Rejection Reason:</p>
-              <p className="text-sm font-normal">Certificate proof missing or invalid.</p>
+            <div className="space-y-1 rounded-md border border-destructive/10 bg-destructive/5 p-4 text-destructive">
+              <p className="text-xs font-semibold tracking-wider uppercase">
+                Rejection Reason:
+              </p>
+              <p className="text-sm font-normal">
+                Certificate proof missing or invalid.
+              </p>
             </div>
             <p>
-              Please resubmit with correct documentation or review the claim guidelines if applicable.
+              Please resubmit with correct documentation or review the claim
+              guidelines if applicable.
             </p>
           </>
         )}
 
         {/* Signature */}
-        <div className="border-t border-border pt-4 mt-6 text-xs text-muted-foreground space-y-0.5">
-          <p className="font-semibold">Office of Student Affairs</p>
-          <p>Community Merits Commission</p>
+        <div className="mt-6 space-y-0.5 border-t border-border pt-4 text-xs text-muted-foreground">
+          <p className="font-semibold">
+            {activeIteration === 2
+              ? "MARS Registrar"
+              : "Office of Student Affairs"}
+          </p>
+          <p>
+            {activeIteration === 2
+              ? "MARS Office of Records"
+              : "Community Merits Commission"}
+          </p>
         </div>
       </div>
     </div>
@@ -116,9 +137,9 @@ function EmailBodyFrame({ log }: { log: SystemLog }) {
 }
 
 export default function AdminLogsPage() {
-  const { activePhase } = usePhase()
+  const { activePhase, activeIteration } = usePhase()
   const store = useMockStore()
-  
+
   const [mounted, setMounted] = useState(false)
   const [search, setSearch] = useState("")
   const [statusFilter, setStatusFilter] = useState("ALL")
@@ -133,12 +154,12 @@ export default function AdminLogsPage() {
   })
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setMounted(true)
   }, [])
 
   // Initial Mock logs
   const getInitialLogs = (iteration: number): SystemLog[] => {
-    const isIteration1 = iteration === 1
     const base = [
       {
         id: "log-1",
@@ -207,8 +228,8 @@ export default function AdminLogsPage() {
 
   if (!mounted) {
     return (
-      <div className="mx-auto max-w-7xl p-4 sm:p-6 lg:p-8 flex items-center justify-center min-h-[50vh]">
-        <div className="text-muted-foreground font-medium">Loading logs...</div>
+      <div className="mx-auto flex min-h-[50vh] max-w-7xl items-center justify-center p-4 sm:p-6 lg:p-8">
+        <div className="font-medium text-muted-foreground">Loading logs...</div>
       </div>
     )
   }
@@ -216,9 +237,7 @@ export default function AdminLogsPage() {
   const isPhase1Claims = activePhase === 1
 
   // Select logs list
-  const logsList = isPhase1Claims
-    ? getInitialLogs(1)
-    : store.logs
+  const logsList = isPhase1Claims ? getInitialLogs(activeIteration) : store.logs
 
   // Filter logs based on search criteria and selections
   const filteredLogs = logsList.filter((log) => {
@@ -227,7 +246,8 @@ export default function AdminLogsPage() {
       log.emailSubject.toLowerCase().includes(search.toLowerCase()) ||
       log.eventType.toLowerCase().includes(search.toLowerCase())
 
-    const matchesStatus = statusFilter === "ALL" || log.emailStatus === statusFilter
+    const matchesStatus =
+      statusFilter === "ALL" || log.emailStatus === statusFilter
     const matchesEvent = eventFilter === "ALL" || log.eventType === eventFilter
 
     return matchesSearch && matchesStatus && matchesEvent
@@ -235,15 +255,28 @@ export default function AdminLogsPage() {
 
   // Simulated notification triggers for testability
   const handleSimulateDispatch = () => {
-    const randomEvent = Math.random() > 0.5 ? "CLAIM_SUBMISSION" : "CLAIM_DECISION"
-    const randomRecipient = Math.random() > 0.6 ? "emma@student.edu" : Math.random() > 0.3 ? "david@student.edu" : "invalid-student@bounced.edu"
-    const randomStatus = randomRecipient.includes("bounced") ? "BOUNCED" : Math.random() > 0.2 ? "DELIVERED" : "SENT"
+    const randomEvent =
+      Math.random() > 0.5 ? "CLAIM_SUBMISSION" : "CLAIM_DECISION"
+    const randomRecipient =
+      Math.random() > 0.6
+        ? "emma@student.edu"
+        : Math.random() > 0.3
+          ? "david@student.edu"
+          : "invalid-student@bounced.edu"
+    const randomStatus = randomRecipient.includes("bounced")
+      ? "BOUNCED"
+      : Math.random() > 0.2
+        ? "DELIVERED"
+        : "SENT"
 
     let subject = ""
     if (randomEvent === "CLAIM_SUBMISSION") {
       subject = "Claim Submission Confirmation"
     } else {
-      subject = Math.random() > 0.5 ? "Merit Claim Approved!" : "Merit Claim Status Update"
+      subject =
+        Math.random() > 0.5
+          ? "Merit Claim Approved!"
+          : "Merit Claim Status Update"
     }
 
     const now = new Date()
@@ -253,12 +286,12 @@ export default function AdminLogsPage() {
     const newLog: SystemLog = {
       id: `log-${Date.now()}`,
       timestamp,
-      eventType: randomEvent as any,
+      eventType: randomEvent as never,
       description: `Email dispatch: ${subject} for simulated transaction`,
       recipientEmail: randomRecipient,
       emailSubject: subject,
       emailBody: "",
-      emailStatus: randomStatus as any,
+      emailStatus: randomStatus as never,
     }
 
     if (isPhase1Claims) {
@@ -276,19 +309,28 @@ export default function AdminLogsPage() {
     switch (status) {
       case "DELIVERED":
         return (
-          <Badge className="bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20 font-medium" variant="outline">
+          <Badge
+            className="border-emerald-500/20 bg-emerald-500/10 font-medium text-emerald-600 dark:text-emerald-400"
+            variant="outline"
+          >
             DELIVERED
           </Badge>
         )
       case "SENT":
         return (
-          <Badge className="bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20 font-medium" variant="outline">
+          <Badge
+            className="border-blue-500/20 bg-blue-500/10 font-medium text-blue-600 dark:text-blue-400"
+            variant="outline"
+          >
             SENT
           </Badge>
         )
       case "BOUNCED":
         return (
-          <Badge className="bg-destructive/10 text-destructive border-destructive/20 font-medium" variant="outline">
+          <Badge
+            className="border-destructive/20 bg-destructive/10 font-medium text-destructive"
+            variant="outline"
+          >
             BOUNCED
           </Badge>
         )
@@ -299,96 +341,117 @@ export default function AdminLogsPage() {
 
   // Stats calculation
   const totalCount = logsList.length
-  const deliveredCount = logsList.filter((l) => l.emailStatus === "DELIVERED").length
+  const deliveredCount = logsList.filter(
+    (l) => l.emailStatus === "DELIVERED"
+  ).length
   const sentCount = logsList.filter((l) => l.emailStatus === "SENT").length
-  const bouncedCount = logsList.filter((l) => l.emailStatus === "BOUNCED").length
+  const bouncedCount = logsList.filter(
+    (l) => l.emailStatus === "BOUNCED"
+  ).length
 
   return (
-    <div className="mx-auto max-w-7xl p-4 sm:p-6 lg:p-8 space-y-6">
+    <div className="mx-auto max-w-7xl space-y-6 p-4 sm:p-6 lg:p-8">
       {/* Header Section */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between border-b border-border pb-4">
+      <div className="flex flex-col gap-4 border-b border-border pb-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <div className="flex items-center gap-2">
-            <Shield className="h-7 w-7 text-primary" />
-            <h1 className="text-3xl font-bold tracking-tight">
-              Admin Audit Logs & SMTP Tracker
-            </h1>
-          </div>
-          <p className="text-muted-foreground mt-1">
-            Track system transactions, transactional email delivery statuses, and audit email logs.
+          <h1 className="text-3xl font-bold tracking-tight">
+            {activeIteration === 2 ? "System Logs" : "System Activity Logs"}
+          </h1>
+          <p className="mt-1 text-muted-foreground">
+            Monitor system events and email delivery status.
           </p>
         </div>
-        <Button onClick={handleSimulateDispatch} className="sm:self-end flex items-center gap-1.5 cursor-pointer">
+        <Button
+          onClick={handleSimulateDispatch}
+          className="flex cursor-pointer items-center gap-1.5 sm:self-end"
+        >
           <Play className="h-4 w-4 fill-current" />
           Simulate Dispatch
         </Button>
       </div>
 
-      {/* Summary KPI Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Transactions</CardTitle>
-            <Mail className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium">Total Logs</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{totalCount}</div>
-            <p className="text-xs text-muted-foreground mt-1">Audit logs recorded</p>
+            <p className="mt-1 text-xs text-muted-foreground">Logged events</p>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Delivered</CardTitle>
-            <CheckCircle2 className="h-4 w-4 text-emerald-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">{deliveredCount}</div>
-            <p className="text-xs text-muted-foreground mt-1">Successful SMTP transmissions</p>
+            <div className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">
+              {deliveredCount}
+            </div>
+            <p className="mt-1 text-xs text-muted-foreground">
+              Sent emails successfully delivered
+            </p>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Outgoing / Sent</CardTitle>
-            <Clock className="h-4 w-4 text-blue-500" />
+            <CardTitle className="text-sm font-medium">Sent</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">{sentCount}</div>
-            <p className="text-xs text-muted-foreground mt-1">In transit or queued</p>
+            <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">
+              {sentCount}
+            </div>
+            <p className="mt-1 text-xs text-muted-foreground">
+              Emails sent out
+            </p>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Bounced</CardTitle>
-            <AlertCircle className="h-4 w-4 text-destructive" />
+            <CardTitle className="text-sm font-medium">
+              Delivery Failures
+            </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-destructive">{bouncedCount}</div>
-            <p className="text-xs text-muted-foreground mt-1">Failed delivery attempts</p>
+            <div className="text-2xl font-bold text-destructive">
+              {bouncedCount}
+            </div>
+            <p className="mt-1 text-xs text-muted-foreground">
+              Failed delivery attempts
+            </p>
           </CardContent>
         </Card>
       </div>
 
       {/* Filter / Search Bar */}
-      <div className="flex flex-col sm:flex-row gap-4 items-center justify-between">
-        <div className="relative flex-1 w-full">
-          <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+      <div className="flex flex-col items-center justify-between gap-4 sm:flex-row">
+        <div className="relative w-full flex-1">
+          <Search className="absolute top-2.5 left-3 h-4 w-4 text-muted-foreground" />
           <Input
             placeholder="Search by recipient, subject, or type..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="pl-9 w-full"
+            className="w-full pl-9"
           />
         </div>
-        <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+        <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto">
           <Select value={statusFilter} onValueChange={setStatusFilter}>
             <SelectTrigger className="w-[140px] cursor-pointer">
               <SelectValue placeholder="All Statuses" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem className="cursor-pointer" value="ALL">All Statuses</SelectItem>
-              <SelectItem className="cursor-pointer" value="DELIVERED">Delivered</SelectItem>
-              <SelectItem className="cursor-pointer" value="SENT">Sent</SelectItem>
-              <SelectItem className="cursor-pointer" value="BOUNCED">Bounced</SelectItem>
+              <SelectItem className="cursor-pointer" value="ALL">
+                All Statuses
+              </SelectItem>
+              <SelectItem className="cursor-pointer" value="DELIVERED">
+                Delivered
+              </SelectItem>
+              <SelectItem className="cursor-pointer" value="SENT">
+                Sent
+              </SelectItem>
+              <SelectItem className="cursor-pointer" value="BOUNCED">
+                Bounced
+              </SelectItem>
             </SelectContent>
           </Select>
 
@@ -397,9 +460,15 @@ export default function AdminLogsPage() {
               <SelectValue placeholder="All Event Types" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem className="cursor-pointer" value="ALL">All Event Types</SelectItem>
-              <SelectItem className="cursor-pointer" value="CLAIM_SUBMISSION">Claim Submission</SelectItem>
-              <SelectItem className="cursor-pointer" value="CLAIM_DECISION">Claim Decision</SelectItem>
+              <SelectItem className="cursor-pointer" value="ALL">
+                All Event Types
+              </SelectItem>
+              <SelectItem className="cursor-pointer" value="CLAIM_SUBMISSION">
+                Claim Submission
+              </SelectItem>
+              <SelectItem className="cursor-pointer" value="CLAIM_DECISION">
+                Claim Decision
+              </SelectItem>
             </SelectContent>
           </Select>
 
@@ -411,7 +480,7 @@ export default function AdminLogsPage() {
                 setStatusFilter("ALL")
                 setEventFilter("ALL")
               }}
-              className="h-9 px-2 lg:px-3 text-muted-foreground cursor-pointer"
+              className="h-9 cursor-pointer px-2 text-muted-foreground lg:px-3"
             >
               Reset
               <RotateCcw className="ml-2 h-4 w-4" />
@@ -431,20 +500,25 @@ export default function AdminLogsPage() {
                 <TableHead className="w-[200px]">Recipient</TableHead>
                 <TableHead>Subject</TableHead>
                 <TableHead className="w-[120px]">Status</TableHead>
-                <TableHead className="text-right w-[100px]">Action</TableHead>
+                <TableHead className="w-[100px] text-right">Action</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {filteredLogs.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center py-12 text-muted-foreground">
+                  <TableCell
+                    colSpan={6}
+                    className="py-12 text-center text-muted-foreground"
+                  >
                     No matching logs found in system registry.
                   </TableCell>
                 </TableRow>
               ) : (
                 filteredLogs.map((log) => (
                   <TableRow key={log.id}>
-                    <TableCell className="font-mono text-xs text-muted-foreground">{log.timestamp}</TableCell>
+                    <TableCell className="font-mono text-xs text-muted-foreground">
+                      {log.timestamp}
+                    </TableCell>
                     <TableCell>
                       <Badge
                         variant="outline"
@@ -458,8 +532,12 @@ export default function AdminLogsPage() {
                         {log.eventType}
                       </Badge>
                     </TableCell>
-                    <TableCell className="font-medium truncate max-w-[200px]">{log.recipientEmail}</TableCell>
-                    <TableCell className="max-w-[250px] truncate">{log.emailSubject}</TableCell>
+                    <TableCell className="max-w-[200px] truncate font-medium">
+                      {log.recipientEmail}
+                    </TableCell>
+                    <TableCell className="max-w-[250px] truncate">
+                      {log.emailSubject}
+                    </TableCell>
                     <TableCell>{getStatusBadge(log.emailStatus)}</TableCell>
                     <TableCell className="text-right">
                       <Button
@@ -481,73 +559,108 @@ export default function AdminLogsPage() {
 
       {/* Email Inspector (Slide-out Drawer) */}
       {selectedLog && (
-        <Drawer direction="right" open={!!selectedLog} onOpenChange={(open) => !open && setSelectedLog(null)}>
-          <DrawerContent className="sm:max-w-md md:max-w-lg flex flex-col h-full overflow-y-auto">
-            <DrawerHeader className="pb-4 border-b border-border">
+        <Drawer
+          direction="right"
+          open={!!selectedLog}
+          onOpenChange={(open) => !open && setSelectedLog(null)}
+        >
+          <DrawerContent className="flex h-full w-full flex-col overflow-y-auto sm:max-w-[35vw]">
+            <DrawerHeader className="border-b border-border pb-4">
               <DrawerTitle className="flex items-center gap-2 text-xl font-bold">
                 <Mail className="h-5 w-5 text-primary" />
                 <span>Email Inspector</span>
               </DrawerTitle>
               <DrawerDescription>
-                Inspect details of the transactional email template and SMTP headers.
+                View email details and delivery headers.
               </DrawerDescription>
             </DrawerHeader>
 
-            <div className="flex-1 py-6 space-y-6">
+            <div className="flex-1 space-y-6 py-6">
               {/* SMTP Header Details */}
-              <div className="space-y-2.5 bg-muted/40 p-4 rounded-lg border border-border text-xs font-mono">
+              <div className="space-y-2.5 rounded-lg border border-border bg-muted/40 p-4 font-mono text-xs">
                 <div className="flex justify-between gap-4">
-                  <span className="text-muted-foreground font-semibold shrink-0">FROM:</span>
-                  <span className="text-foreground truncate">no-reply@communitymerits.edu</span>
+                  <span className="shrink-0 font-semibold text-muted-foreground">
+                    FROM:
+                  </span>
+                  <span className="truncate text-foreground">
+                    no-reply@communitymerits.edu
+                  </span>
                 </div>
                 <div className="flex justify-between gap-4">
-                  <span className="text-muted-foreground font-semibold shrink-0">TO:</span>
-                  <span className="text-foreground truncate">{selectedLog.recipientEmail}</span>
+                  <span className="shrink-0 font-semibold text-muted-foreground">
+                    TO:
+                  </span>
+                  <span className="truncate text-foreground">
+                    {selectedLog.recipientEmail}
+                  </span>
                 </div>
                 <div className="flex justify-between gap-4">
-                  <span className="text-muted-foreground font-semibold shrink-0">SUBJECT:</span>
-                  <span className="text-foreground font-bold truncate">{selectedLog.emailSubject}</span>
+                  <span className="shrink-0 font-semibold text-muted-foreground">
+                    SUBJECT:
+                  </span>
+                  <span className="truncate font-bold text-foreground">
+                    {selectedLog.emailSubject}
+                  </span>
                 </div>
                 <div className="flex justify-between gap-4">
-                  <span className="text-muted-foreground font-semibold shrink-0">DATE:</span>
-                  <span className="text-foreground">{selectedLog.timestamp}</span>
+                  <span className="shrink-0 font-semibold text-muted-foreground">
+                    DATE:
+                  </span>
+                  <span className="text-foreground">
+                    {selectedLog.timestamp}
+                  </span>
                 </div>
-                <div className="flex justify-between items-center pt-2.5 border-t border-border/50">
-                  <span className="text-muted-foreground font-semibold">STATUS:</span>
+                <div className="flex items-center justify-between border-t border-border/50 pt-2.5">
+                  <span className="font-semibold text-muted-foreground">
+                    STATUS:
+                  </span>
                   <span>{getStatusBadge(selectedLog.emailStatus)}</span>
                 </div>
               </div>
 
               {/* Email Body Frame */}
               <div className="space-y-2">
-                <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider block">
-                  Email Body Frame (HTML Preview)
+                <span className="block text-xs font-semibold tracking-wider text-muted-foreground uppercase">
+                  Email Preview
                 </span>
-                <div className="border border-border rounded-lg overflow-hidden bg-zinc-50 dark:bg-zinc-950 p-4 sm:p-6 shadow-inner">
+                <div className="overflow-hidden rounded-lg border border-border bg-zinc-50 p-4 shadow-inner sm:p-6 dark:bg-zinc-950">
                   <EmailBodyFrame log={selectedLog} />
                 </div>
               </div>
             </div>
 
             {/* Actions Footer */}
-            <div className="border-t border-border pt-4 mt-auto flex gap-2">
-              <Button variant="outline" className="flex-1 cursor-pointer" onClick={() => setSelectedLog(null)}>
+            <div className="mt-auto flex gap-2 border-t border-border pt-4">
+              <Button
+                variant="outline"
+                className="flex-1 cursor-pointer"
+                onClick={() => setSelectedLog(null)}
+              >
                 Close
               </Button>
               {selectedLog.emailStatus === "BOUNCED" && (
-                <Button variant="destructive" className="flex-grow flex items-center justify-center gap-1.5 cursor-pointer">
+                <Button
+                  variant="destructive"
+                  className="flex flex-grow cursor-pointer items-center justify-center gap-1.5"
+                >
                   <Send className="h-4 w-4" />
                   Retry Delivery
                 </Button>
               )}
               {selectedLog.emailStatus === "SENT" && (
-                <Button variant="default" className="flex-grow flex items-center justify-center gap-1.5 cursor-pointer">
+                <Button
+                  variant="default"
+                  className="flex flex-grow cursor-pointer items-center justify-center gap-1.5"
+                >
                   <CheckCircle2 className="h-4 w-4" />
                   Force Send
                 </Button>
               )}
               {selectedLog.emailStatus === "DELIVERED" && (
-                <Button variant="secondary" className="flex-grow flex items-center justify-center gap-1.5 cursor-pointer">
+                <Button
+                  variant="secondary"
+                  className="flex flex-grow cursor-pointer items-center justify-center gap-1.5"
+                >
                   <RotateCcw className="h-4 w-4" />
                   Resend Email
                 </Button>
