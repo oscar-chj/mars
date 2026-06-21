@@ -94,7 +94,7 @@ function LeaderboardContent() {
   const isPhase1Claims = activePhase === 1
 
   const formatMatric = (matric: string) => {
-    if (activeIteration !== 2 && activeIteration !== 3) return matric
+    if (activeIteration < 2) return matric
     if (matric === "U2320491A") return "BC223014"
     if (matric === "U2320555D") return "BC223055"
     if (matric === "U2320999E") return "BC223099"

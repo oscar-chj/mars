@@ -250,7 +250,7 @@ export default function AdminClaimsPage() {
     ? {
         ...rawStudentInfo,
         points:
-          (activeIteration as number) === 4
+          (activeIteration as number) >= 4
             ? claimsList
                 .filter(
                   (c) =>

@@ -1,20 +1,20 @@
-# Merit Activity Records System (MARS): Formal Assignment Report Outline
+# Merit Activity Records System (MARS): Formal Assignment Report
 
 ---
 
 ## 1. Introduction
 
 ### 1.1 Academic Assignment Scope
-This report documents the architectural design, implementation workflow, and iterative refinement of the **Merit Activity Records System (MARS)** (initially prototyped as "Community Merits"). Developed as a modern student merit tracking platform, this system allows students to submit claims for co-curricular achievements and enables administrators to verify, award points, and audit transactional dispatches.
+This report documents the architectural design, implementation workflow, and iterative refinement of the **Merit Activity Records System (MARS)** (initially prototyped as "Community Merits"). Developed as a modern student merit tracking platform, this system allows students to submit claims for co-curricular achievements and enables administrators to verify, award points, and audit transactional email logs.
 
 ### 1.2 Focus on Extreme Prototyping Methodology (EPM)
-Unlike conventional software projects that focus heavily on acquiring immediate end-users or deploying premature infrastructure, this system was developed using the **Extreme Prototyping Methodology (EPM)**. Under EPM:
-- The focus remains on rapid UI/UX modeling, state synchronization, and validating usability constraints.
-- System complexities are deferred or simulated through high-fidelity mocks until requirements are fully stabilized.
-- Iterative cycles are used to pressure-test layout mechanics, data persistence structures, and integration boundaries.
+Unlike conventional software projects that focus heavily on database setup or server deployment early on, this system was developed using the **Extreme Prototyping Methodology (EPM)**. Under EPM:
+- The focus remains on rapid interface design, page transitions, and validating usability constraints.
+- System complexities (such as databases and email dispatch servers) are deferred or simulated through high-fidelity mocks until user-facing designs are fully stabilized.
+- Iterative cycles are used to test layout mechanics, user workflows, and system boundaries.
 
 ### 1.3 Iterative Evolution & Feedback Loops
-Development is strictly managed through horizontal, iterative releases (e.g., Iteration 1 to Iteration 4). The system evolves by capturing user complaints and acceptance criteria in dedicated files under `docs/uat/` at the end of each iteration. These issues are systematically addressed in the subsequent iteration by moving across three implementation phases, ensuring that code updates are scoped, verified, and backward-compatible.
+Development is strictly managed through horizontal, iterative releases (Iteration 1 to Iteration 5). The system evolves by capturing user complaints and acceptance criteria in dedicated files under `docs/uat/` at the end of each iteration. These issues are systematically addressed in the subsequent iteration by moving across three implementation phases, ensuring that code updates are scoped, verified, and backward-compatible.
 
 ---
 
@@ -25,38 +25,37 @@ The application is structured around six core use cases that define student and 
 
 1. **UC1: Student Claim Submission**
    - Students access the dashboard and open the claim submission form.
-   - Input fields: Event Name, Category, Date, Organizer, and Proof Document.
-   - Verification checks (e.g., compulsory inputs, file-type validation) must be met before submission.
-   - Proof documents (PDF certificates) are encoded into Base64 format for client-side storage.
-   - Submission triggers confirmation logs and simulated transactional emails.
+   - Input fields: Event Name, Category, Date, Organizer, and PDF Certificate Proof.
+   - Validation checks (compulsory fields, file size under 5MB) must be met before submission.
+   - Certificate files are stored locally in the browser to enable instant administrative checkups.
 
 2. **UC2: Student Claims Dashboard**
-   - Displays a dynamic overview of the student's metrics (total approved merit points) and profile summary.
-   - Renders a table of past claims, tracking their progress through live badges: `PENDING` (yellow), `APPROVED` (green), or `REJECTED` (red).
+   - Displays a summary of the student's metrics (total approved merit points) and profile summary.
+   - Renders a table of past claims, tracking their progress through status badges: `PENDING` (yellow), `APPROVED` (green), or `REJECTED` (red).
 
 3. **UC3: Admin Claims Queue**
    - A dedicated verification inbox for system administrators.
-   - Lists all claims in the system with filter capabilities (e.g., by status) and badge counters showing the total number of pending claims.
+   - Lists all claims in the system with status filters and pending claim counters.
 
 4. **UC4: Admin Verification Detail Panel (Split-Screen)**
    - Selecting a claim from the queue splits the view:
      - **Left Panel**: Displays detailed metadata about the claim (student name, matric number, category, date, organizer).
-     - **Right Panel**: A Certificate Preview canvas that processes and renders the student's uploaded Base64 PDF proof using client-side `pdf.js` (falling back to a mock image if empty).
+     - **Right Panel**: A Certificate Preview box that renders the student's uploaded PDF proof on screen.
    - Administrators assign a numeric points value and click "Approve" or "Reject".
 
 5. **UC5: Student Leaderboard**
    - A public page showing top performers with a visual podium for the top 3 students.
    - A complete ranking table displays all registered students.
-   - Cumulative points and positions recalculate dynamically from approved claims in the store.
+   - Cumulative points and positions recalculate dynamically from approved claims.
 
 6. **UC6: Transactional Email Notification System (Running Simulator)**
    - Automatically records logs of simulated email transmissions triggered by claim submissions and administrative decisions.
-   - Features an **Email Inspector Drawer** that slides open from the right (45% width on desktop) to display fully styled email templates.
+   - Features an **Email Inspector Drawer** that slides open from the right to display fully styled email templates.
    - Admins can trigger actions directly (Retry Delivery, Force Send, Resend Email) to update log statuses in real-time.
 
-### 2.2 System Diagrams
+### 2.2 System Diagrams (Non-Technical Representation)
 
-#### 2.2.1 Mermaid Use Case Diagram
+#### 2.2.1 Use Case Diagram
 The diagram below details how actors interact with each use case in the system:
 
 ```mermaid
@@ -89,42 +88,39 @@ graph LR
   Admin --> UC6
 ```
 
-#### 2.2.2 Mermaid Class Diagram (TypeScript Models)
-The system models are defined in `src/types/claims.ts`. Below is the UML representation of these types:
+#### 2.2.2 Data Entity Diagram (Simplified Data Models)
+Below is the conceptual layout of the data models used in the system, described in plain language for non-technical stakeholders:
 
 ```mermaid
 classDiagram
   class Student {
-    +string id
-    +string name
-    +string email
-    +string matricNumber
-    +number points
+    Name
+    Email
+    Matric Number
+    Total Merit Points
   }
   
   class Claim {
-    +string id
-    +string studentId
-    +string studentName
-    +string eventName
-    +string category
-    +string date
-    +string organizer
-    +string proofFileName
-    +string proofBase64
-    +number | null pointsAwarded
-    +string status
+    Claim ID
+    Student Name
+    Event Name
+    Event Category
+    Date of Event
+    Event Organizer
+    Certificate File Name
+    Awarded Points
+    Status (Pending / Approved / Rejected)
   }
   
   class SystemLog {
-    +string id
-    +string timestamp
-    +string eventType
-    +string description
-    +string recipientEmail
-    +string emailSubject
-    +string emailBody
-    +string emailStatus
+    Log ID
+    Timestamp
+    Event Type
+    Description
+    Recipient Email
+    Email Subject
+    Email Content
+    Delivery Status (Sent / Delivered / Delivery Failure)
   }
   
   Student "1" -- "many" Claim : submits
@@ -133,39 +129,35 @@ classDiagram
 
 ---
 
-## 3. How We're Building It
+## 3. How We're Building It (Methodology & Architecture)
 
 ### 3.1 Technology Stack & Tools
-* **Next.js (App Router)**: Supports server-side layouts, React hydration handling, and routing architecture.
-* **Tailwind CSS v4**: Provides modern layout utilities for responsive web layouts and interface components.
-* **Zustand**: A lightweight, client-side global state store that operates as an in-memory database simulator.
-* **LocalStorage**: Used to store user state, active phases, and claim data across browser sessions.
-* **Resend**: Integrated for real-world SMTP email notifications in production.
-* **pdfjs-dist**: Used on the client-side to render base64 PDF uploads on an HTML5 `<canvas>` inside the verification panel.
+* **Next.js**: Supports page layouts, page transitions, and routing architecture.
+* **Tailwind CSS v4**: Provides layout utilities for responsive web interfaces.
+* **Zustand**: A client-side global memory state store that coordinates data across pages.
+* **LocalStorage**: Stores user preferences and claim details locally in the browser so data is saved between refreshes.
+* **Resend Service**: Sends actual email alerts to testing inboxes in production.
+* **pdfjs-dist**: Renders PDF certificate documents on the browser screen without layout breakages.
 
 ### 3.2 EPM Horizontal Phase Model
 Rather than building features vertically (where databases, UI, and integrations are built at once for a single page), MARS is built **horizontally** across three engineering phases:
 
-```
-┌────────────────────────────────────────────────────────┐
-│  PHASE 1: Static UI (Local React State, Mock Designs)  │
-└───────────────────────────┬────────────────────────────┘
-                            ▼
-┌────────────────────────────────────────────────────────┐
-│  PHASE 2: Interactive Zustand (In-Memory Synchronization)│
-└───────────────────────────┬────────────────────────────┘
-                            ▼
-┌────────────────────────────────────────────────────────┐
-│  PHASE 3: Persistence & Integrations (LocalStorage/Resend)│
-└────────────────────────────────────────────────────────┘
-```
+1. **Phase 1: Static UI**: Create screen mockups and routes. Local state handles component inputs, resetting upon page reload.
+2. **Phase 2: Zustand Sync**: Connect views using a shared client-side memory store, enabling data synchronization (e.g., student submission immediately appears in the admin queue). State resets on refresh.
+3. **Phase 3: Persistence / Live Integration**: Enable storage persistence in the store, handle hydration matching, and replace mock logic with live APIs (e.g., Resend SMTP).
 
-* **Phase 1: Static UI**: Create screen mockups and routes. Local states handle component inputs, resetting upon navigation or page reload.
-* **Phase 2: Interactive Zustand**: Connect views using a shared Zustand store, enabling data synchronization (e.g., student submission immediately appears in the admin queue). State resets on refresh.
-* **Phase 3: Persistence / Live Integration**: Enable LocalStorage persistent middleware in Zustand, handle hydration matching, and replace mock logic with live APIs (e.g., Resend SMTP).
+### 3.3 Comparative Analysis: EPM vs. Vertical Agile Slicing
+To evaluate the methodology, the table below highlights the trade-offs experienced during development:
 
-### 3.3 Data Flow Architecture
-The diagram below illustrates the data lifecycle: UI interactions mutate the store, which persists to storage and triggers external SMTP events.
+| Dimension | Vertical Slicing (Traditional Agile) | Horizontal Slicing (EPM) |
+| :--- | :--- | :--- |
+| **Development Sequence** | Build DB schema $\rightarrow$ API endpoints $\rightarrow$ Frontend UI per feature. | Build UI for all features $\rightarrow$ Central Client-Side State $\rightarrow$ DB Integration. |
+| **User Feedback Loop** | Delayed (User can only test features after the backend is complete). | Rapid (User reviews visual mockup and layout in Phase 1). |
+| **UX/Design Risk** | High (Changes to UI layout require modifying database tables). | Low (UX refined and approved before the DB schema is locked). |
+| **Team Blockers** | Developers are blocked waiting for database/API specifications. | Frontend, state, and QA developers work concurrently. |
+
+### 3.4 Data Flow Architecture
+The diagram below illustrates the data lifecycle: UI interactions mutate the client-side state store, which persists to local storage and triggers external email dispatches in Phase 3.
 
 ```mermaid
 graph TD
@@ -214,136 +206,149 @@ graph TD
 
 ---
 
-## 4. Who Is Building What: Delegation Plan
+## 4. Who Is Building What: Simulation Delegation Plan
 
-To implement the system horizontally, a 6-member team delegates core modules and EPM phases as detailed below:
+To model a professional software environment, our 6-member team simulated a **Client-Developer Swap Model** across the iterations:
 
-### 4.1 Team Roles & Ownership
+```
+[Iterations 1-2] : Team A (M1, M2, M3) = Developers  │  Team B (M4, M5, M6) = Users & QA
+──────────────────────────────────────────────────────────────────────────────────────
+[Iterations 3-5] : Team A (M1, M2, M3) = Users & QA  │  Team B (M4, M5, M6) = Developers
+```
 
-* **Member 1 (Setup, Design & Global Architecture - Lead)**
-  - Scaffold project, configure Tailwind v4, shadcn primitives, and standard routing layouts.
-  - Implement the header switcher tool (iteration/phase manager) and coordinate local storage synchronization.
-  - Fix hydration and screen-flashing bugs.
+### 4.1 First Half (Iterations 1 & 2)
+*   **Team Developers (Members 1, 2, 3)**:
+    - **Member 1 (Setup & Switcher)**: Scaffolds the Next.js and Tailwind v4 environment, creates page shells, and builds the progressive iteration switcher.
+    - **Member 2 (Student Portal UI)**: Implements Student Dashboard forms and tables.
+    - **Member 3 (Admin Portal UI)**: Builds the Admin claims list, split-screen verification queue, and System Logs page.
+*   **Team Users / QA (Members 4, 5, 6)**:
+    - Test the deployed prototypes at the end of each phase.
+    - Compile user feedback and write down the complaints in UAT logs.
 
-* **Member 2 (Student UI Developer)**
-  - Implement Student Dashboard layouts and past claim history tables.
-  - Build the merit submission modal form (UC1), complete with input checks, dropzone interfaces, and file validator mechanics.
-
-* **Member 3 (Admin UI Developer)**
-  - Design the Admin Claims Queue inbox, status filter systems, and counters (UC3).
-  - Implement the split-screen verification interface (UC4), integrating `pdf.js` canvas rendering for document checks.
-
-* **Member 4 (Zustand Store & State Engineer)**
-  - Establish `useMockStore.ts`, modeling data structures for students, claims, and logs.
-  - Implement state actions (`submitClaim`, `approveClaim`, `rejectClaim`) and manage Zustand persistence configs.
-
-* **Member 5 (Transactional Interactivity & SMTP Simulator)**
-  - Construct the System Logs dashboard, tracking email delivery entries (UC6).
-  - Design HTML email formatting templates and code the Email Inspector Drawer.
-  - Set up action button triggers (Resend, Force Send) and integrate Resend API routing.
-
-* **Member 6 (UAT, QA & Leaderboard Engineer)**
-  - Design and build the Leaderboard podium and ranking layout (UC5), writing the dynamic calculations for merit points.
-  - Coordinate UAT logging under `docs/uat/`, check code types, and run integration reviews.
-
-### 4.2 Responsibility Matrix Across Phases
-
-| Phase / Module | M1 (Setup/Arch) | M2 (Student UI) | M3 (Admin UI) | M4 (Zustand Store) | M5 (SMTP/Email) | M6 (UAT/Leaderboard) |
-| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| **Phase 1 (Static UI)** | Lead: Layouts & Switcher | Lead: Submit form & History | Lead: Inbox list & split-screen | Support: Mock data structure | Lead: Audit table & static drawer | Lead: Leaderboard page & layout |
-| **Phase 2 (Zustand)** | Lead: Phase sync & Hydration fix | Lead: Submit form state | Lead: Split-screen details state | Lead: Zustand store actions | Lead: State email triggers | Lead: Dynamic point calculations |
-| **Phase 3 (Persistence)** | Lead: Swapping store versions | Support: Form validation rules | Support: PDF.js client render | Lead: LocalStorage persistence | Lead: Resend API integrations | Lead: QA & compiler check-offs |
+### 4.2 Second Half (Iterations 3, 4, & 5)
+*   **Team Developers (Members 4, 5, 6)**:
+    - **Member 4 (Zustand State Store)**: Manages store variables, creates actions, and wires `localStorage` persistence.
+    - **Member 5 (Interactivity & Integrations)**: Connects UI events to store hooks, handles PDF.js client-side rendering, and integrates Resend API routing.
+    - **Member 6 (Quality Assurance & Calculations)**: Writes dynamic points calculations, enforces form checks, and adds table pagination.
+*   **Team Users / QA (Members 1, 2, 3)**:
+    - Perform systematic testing, audit code quality, and write UAT feedback logs.
 
 ---
 
 ## 5. Documented Building Process and Proof of Work
 
-### 5.1 The Iteration-x Complaint-Resolution Pattern
-The development workflow leverages a strict UAT feedback loops process:
+The development workflow is driven by feedback loops where user complaints logged in iteration $x$ are resolved horizontally in iteration $x+1$ across EPM phases.
 
-```
-[UAT Iteration x Log] ──> [EPM Phase 1: Static Fix] ──> [EPM Phase 2: State Fix] ──> [EPM Phase 3: Persist/SMTP Fix] ──> [Verified Iteration x+1]
-```
+### 5.1 Iteration 1 (Transition to v2.3)
+*   **User Complaints (`docs/uat/iteration-1.md`)**:
+    1. *Generic Branding*: Title "Community Merits" felt generic.
+    2. *Outdated Matriculation Numbers*: Matric formats were legacy formats (e.g., `U232...`).
+    3. *Browser-Default Date Input*: Standard HTML date picker caused layout differences across browsers.
+*   **EPM Phase Resolutions**:
+    - **Phase 1 (Static UI)**: Created mockups of the custom Calendar popover and renamed the brand to "MARS".
+    - **Phase 2 (Zustand Sync)**: Configured the iteration switcher to update layouts based on iteration.
+    - **Phase 3 (Persistence)**: Initialized new alphanumeric matric formats in persistent state.
+*   **UI Layout Snapshots**:
+    - `[UI Screenshot Placeholder: Iteration 1 Student Dashboard showing legacy date field]`
+    - `[UI Screenshot Placeholder: Iteration 2 Student Dashboard showing custom calendar popover]`
+*   **UAT Test Execution**:
+    
+    | Test ID | Action Performed | Expected Behavior | Actual Behavior | Status |
+    | :--- | :--- | :--- | :--- | :--- |
+    | T1.1 | Switch to Iteration 2 | Brand name updates to MARS. | Brand name updates to MARS. | Pass |
+    | T1.2 | Select date field | Custom calendar popover slides open. | Custom calendar popover slides open. | Pass |
 
-1. User tests Iteration $x$ and writes feedback into `docs/uat/iteration-x.md`.
-2. The team reviews the complaints and plans fixes for Iteration $x+1$.
-3. All code modifications are locked using conditional iteration evaluations (`activeIteration === x + 1`), keeping prior versions clean.
-4. Changes are deployed across EPM phases (static UI -> interactive store -> persistent integrations).
-5. The next iteration is verified, and the cycle continues.
+---
 
-### 5.2 Chronology of Completed Iterations
+### 5.2 Iteration 2 (Transition to v3.3)
+*   **User Complaints (`docs/uat/iteration-2.md`)**:
+    1. *Page Header Inconsistency*: Header link read "Audit Logs" but page title said "System Logs".
+    2. *Filter Reset Button Layout*: Reset button shifted UI alignment when rendered.
+    3. *Reload Flashing & Hydration Mismatch*: Reloading briefly flashed version states before loading client-side settings.
+    4. *Certificate Proof Upload*: Upload forms did not allow students to submit a document, nor could admins view proof files.
+*   **EPM Phase Resolutions**:
+    - **Phase 1 (Static UI)**: Standardized page titles to "System Logs" and designed file dropzones.
+    - **Phase 2 (Zustand Sync)**: Added Base64 image encoding to claim submissions and created state actions.
+    - **Phase 3 (Persistence)**: Integrated the `isReady` flag in the phase context to render skeletons and resolve page flashing.
+*   **UI Layout Snapshots**:
+    - `[UI Screenshot Placeholder: Iteration 2 Audit Logs page with misaligned Reset button]`
+    - `[UI Screenshot Placeholder: Iteration 3 System Logs page with aligned Reset button and wider inspect drawer]`
+*   **UAT Test Execution**:
+    
+    | Test ID | Action Performed | Expected Behavior | Actual Behavior | Status |
+    | :--- | :--- | :--- | :--- | :--- |
+    | T2.1 | Refresh page on Iteration 2 | Layout remains stable with loader skeleton; no version flashing. | Layout remains stable; no flashing. | Pass |
+    | T2.2 | Upload PNG file on dashboard | File name is shown; Base64 preview renders on admin claims view. | File name is shown; Base64 preview renders. | Pass |
 
-#### 5.2.1 Iteration 1 (Transition to v2.x)
-- **Complaints Captured (`docs/uat/iteration-1.md`)**:
-  1. *Generic Branding*: Platform name "Community Merits" felt generic.
-  2. *Outdated Matriculation Numbers*: Matric formats were legacy formats (e.g., `U232...`).
-  3. *Browser-Default Date Input*: Standard date picker inputs caused layout differences across browsers.
-- **Resolutions Implemented**:
-  1. Renamed system branding to "MARS (Merit Activity Records System)" for Iteration >= 2.
-  2. Upgraded mock database matriculation formats to the standard alphanumeric format (e.g., `BC223014`).
-  3. Replaced HTML date fields with a custom popover calendar widget.
+---
 
-#### 5.2.2 Iteration 2 (Transition to v3.x)
-- **Complaints Captured (`docs/uat/iteration-2.md`)**:
-  1. *Header Name Inconsistency*: Menu link read "Audit Logs" but page header displayed "System Logs".
-  2. *Audit Logs Filter Reset Button Layout*: Reset button shifted UI alignment when rendered.
-  3. *Redundant Page Dividers*: Unnecessary lines cluttered headers.
-  4. *Email Drawer Layout & Width*: Drawer had vertical overflow bugs and was too narrow on desktop viewports.
-  5. *Dashboard Value Inconsistency*: Points on the student profile page did not match the sum of approved claims in the history table.
-  6. *Page Reload Flashing & Hydration Mismatches*: Page load briefly flickered initial version states before loading local storage preferences.
-  7. *Redundant Navigation Controls*: Extra "Back to Dashboard" buttons crowded screen elements.
-  8. *Certificate Proof Upload*: Upload forms did not allow students to submit a document, nor could admins view proof files.
-- **Resolutions Implemented**:
-  1. Standardized titles and headers to "System Logs".
-  2. Refined reset filter styling to fit inline layouts.
-  3. Removed unnecessary dividers.
-  4. Widened the drawer to `35vw` on desktop viewports and added overflow safety.
-  5. Recalculated user points dynamically from approved history rows.
-  6. Introduced `isReady` state flags in context providers and set loader/skeleton fallbacks to eliminate hydration mismatches.
-  7. Removed redundant navigational buttons.
-  8. Enabled Base64 certificate upload (PNG/JPG) for students and built split-screen previews for verification.
+### 5.3 Iteration 3 (Transition to v4.3)
+*   **User Complaints (`docs/uat/iteration-3.md`)**:
+    1. *Leaderboards Value Inconsistency*: Leaderboard did not reflect actual approved claim points (Alice showing 120 points instead of 40).
+    2. *Compulsory Form Fields*: Claims could be submitted with empty fields.
+    3. *PDF File Preview*: Uploads failed to render on mobile browsers.
+    4. *Table Pagination*: Large tables lacked navigation controls.
+*   **EPM Phase Resolutions**:
+    - **Phase 1 (Static UI)**: Designed pagination controls at the bottom of tables.
+    - **Phase 2 (Zustand Sync)**: Hooked leaderboard rankings to sum up approved claim points dynamically.
+    - **Phase 3 (Persistence)**: Integrated `pdf.js` library to parse PDF files and render them on an HTML5 canvas in the admin panel.
+*   **UI Layout Snapshots**:
+    - `[UI Screenshot Placeholder: Admin claims queue showing split-screen detail view with empty proof box]`
+    - `[UI Screenshot Placeholder: Admin claims queue rendering student PDF certificate on canvas via PDF.js]`
+*   **UAT Test Execution**:
+    
+    | Test ID | Action Performed | Expected Behavior | Actual Behavior | Status |
+    | :--- | :--- | :--- | :--- | :--- |
+    | T3.1 | Open Leaderboard | Alice Chen displays 40 points (sum of approved claims). | Alice displays 40 points. | Pass |
+    | T3.2 | Select claims queue page | Table displays 5 items per page with navigation. | Table displays 5 items with navigation. | Pass |
 
-#### 5.2.3 Iteration 3 (Transition to v4.x)
-- **Complaints Captured (`docs/uat/iteration-3.md`)**:
-  1. *Leaderboard Point Discrepancies*: Leaderboard values did not reflect actual approved claims.
-  2. *Compulsory Form Inputs*: Students could submit incomplete merit claims.
-  3. *Certificate Proof Verification*: Split-screen view showed simulated template designs instead of the student's uploaded document.
-  4. *Email Drawer Actions*: Buttons inside the email drawer (resend, retry) were static and located in the footer.
-  5. *No Pagination*: Pages loaded large datasets without pagination controls.
-  6. *Branding Word Adjustments*: The branding header for Iteration >= 2 should say "MARS" instead of "MARS Portal".
-  7. *File-Type Validation & PDF Preview*: PDF format was not enforced, and files failed to render on mobile browsers.
-  8. *Live SMTP Integration*: System did not dispatch real emails.
-- **Resolutions Implemented (Iteration 4 Focus)**:
-  - Addressed all items under Iteration 4 (see Section 5.3).
+---
 
-### 5.3 Active Iteration 4 Implementation Plan
-To complete the system, the team is executing the following upgrades scoped to `activeIteration === 4`:
+### 5.4 Iteration 4 (Transition to v5.3)
+*   **User Complaints (`docs/uat/iteration-4.md`)**:
+    1. *Log Ingestion*: Action buttons in logs drawer did not create new audit log entries.
+    2. *Dynamic Log Tracking*: Submission/review dispatches did not dynamically append logs.
+    3. *Toaster Microcopy Compliance*: Toast messages contained banned words ("successfully") or exclamation marks.
+    4. *PDF Size Constraint*: Students could upload PDFs larger than 5MB.
+*   **EPM Phase Resolutions**:
+    - **Phase 1 (Static UI)**: Updated email inspect drawer action buttons and positioned them in the footer.
+    - **Phase 2 (Zustand Sync)**: Enabled actions (Resend, Force Send) to dynamically append new log objects.
+    - **Phase 3 (Persistence)**: Connected live email alerts via Resend API and removed the manual simulation dispatch button.
+*   **UI Layout Snapshots**:
+    - `[UI Screenshot Placeholder: System Logs inspect drawer before width adjustment]`
+    - `[UI Screenshot Placeholder: System Logs inspect drawer (45% width) with action buttons in footer]`
+*   **UAT Test Execution**:
+    
+    | Test ID | Action Performed | Expected Behavior | Actual Behavior | Status |
+    | :--- | :--- | :--- | :--- | :--- |
+    | T4.1 | Click 'Resend Email' | A new email log is appended to the logs table in real time. | A new email log is appended in real time. | Pass |
+    | T4.2 | Upload 6MB PDF file | Blocked with toast: "File size must be smaller than 5MB". | Blocked with warning toast. | Pass |
 
-1. **Leaderboard Consistency**: Dynamic points evaluation from approved claims. Set Alice Chen's default points count to 40 (corresponds to her approved claim).
-2. **Compulsory Fields**: Submit button is disabled on the student claim form until Event Name, Organizer, Category, Date, and PDF Upload are provided.
-3. **PDF.js Canvas Preview**: Enforce `.pdf` uploads, store files as base64, and render pages onto an HTML `<canvas>` using `pdfjs-dist` to prevent layout breakages.
-4. **Interactive Email Inspector**: Widened the drawer to `45vw` on desktop. Placed functional buttons (Retry, Force Send, Resend) inside the preview container, which update log statuses and show toast feedback.
-5. **Dynamic Pagination**: Added 5-item page slicing on tables for logs, claims queue, student history, and leaderboards using standard pagination primitives.
-6. **Clean Header Branding**: Set header text to "MARS" for iterations >= 2.
-7. **Resend Email Integration**: Configured real SMTP email dispatches for Phase 3 using the Resend package, mapping updates to `onboarding@resend.dev` and removing the manual simulation button from the logs page.
+---
+
+### 5.5 Final Audit & Open UAT Issues (Iteration 5 Checkpoint)
+At the end of Iteration 5, the QA Team conducted a final audit on the codebase and logged the following issues to be addressed in the next development cycle:
+
+1. **Refactoring Omission**: While the directories `src/components/dashboard`, `src/components/admin/claims`, and `src/components/admin/logs` were created, the modular refactoring was not implemented; page files remain monolithic (700-1050 lines).
+2. **Font Mismatch**: The email body preview drawer does not support font fallback options ('Courier New' for lower iterations vs 'Inter' for iteration 5).
+3. **Toaster Logic Bug**: `closeButton={activeIteration < 5}` is reversed, disabling the close button in iteration 5 instead of enabling it.
+4. **Matric Number Formatting Bug**: A conditional check in the leaderboard page (`activeIteration !== 2 && activeIteration !== 3`) prevents formatting matric numbers in Iteration 4 and 5.
+5. **Claims Queue Points Bug**: A strict check (`activeIteration === 4`) in `admin/claims/page.tsx` causes points calculation to revert to `0` in Iteration 5.
 
 ---
 
 ## 6. What Next (Roadmap)
 
-To transition from the current prototype to a production-ready system, the following roadmap is proposed:
+To transition from the current high-fidelity prototype to a production-ready system, the following roadmap is proposed:
 
-### 6.1 Phase 3 Production Migration (DB Integration)
-- **Prisma & PostgreSQL Deployment**: Replace the client-side Zustand simulation store with a real backend database. Setup Prisma ORM schemas matching the `Student`, `Claim`, and `SystemLog` entities, hosting data on a managed PostgreSQL server.
-- **Next.js Server Actions**: Convert state actions (`submitClaim`, `approveClaim`, etc.) into Next.js Server Actions or API routes secured with CSRF protection and server-side model validation.
+### 6.1 Database & API Migration
+- **ORM & Server Actions**: Replace the client-side memory store with a database using Prisma ORM mapping to a hosted PostgreSQL database.
+- **Server-Side Validation**: Convert state actions (`submitClaim`, `approveClaim`) into Next.js Server Actions with server-side validation.
 
-### 6.2 Cloud Asset Storage
-- **Object Storage Service Integration**: Instead of encoding files into base64 strings in the database, migrate PDF storage to cloud object storage (e.g., AWS S3, Vercel Blob).
-- **Secure File Access**: Store file URLs in the database and access them securely using signed URLs or session tokens during administration checks.
+### 6.2 Object Cloud Storage
+- **Object Storage Service**: Replace database Base64 storage with AWS S3 or Vercel Blob storage for PDF uploads.
+- **Signed URLs**: Store file URLs in the database and access them securely using signed URLs.
 
-### 6.3 Enterprise Email Infrastructure
-- **Custom Verified Domain**: Update Resend configurations to transition from the onboarding sandbox (`onboarding@resend.dev`) to a verified organization domain.
-- **SMTP Status Logs & Webhooks**: Configure Resend webhook listeners to log actual delivery statuses (e.g., tracking delivery, bounces, and failures in the System Logs dashboard).
-
-### 6.4 Authentication & Access Control
-- **NextAuth / Clerk Integration**: Implement role-based authentication (RBAC). Restrict the Student Dashboard to authorized students and secure administrative routes behind verified staff authorization.
+### 6.3 Authentication & Authorization
+- **Role-Based Access Control (RBAC)**: Integrate Clerk or NextAuth to secure dashboard routes.
+- **Access Restrictions**: Lock the Student Dashboard to authorized students and secure administrative routes behind verified staff roles.
