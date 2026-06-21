@@ -1,6 +1,6 @@
 "use client"
 
-import { Calendar as CalendarIcon, Plus, Upload } from "lucide-react"
+import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, Plus, Upload } from "lucide-react"
 import React, { useEffect, useState } from "react"
 
 import { Badge } from "@/components/ui/badge"
@@ -45,15 +45,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import {
-  Pagination,
-  PaginationContent,
-  PaginationEllipsis,
-  PaginationItem,
-  PaginationLink,
-  PaginationNext,
-  PaginationPrevious,
-} from "@/components/ui/pagination"
+
 import { usePhase } from "@/context/PhaseContext"
 import { cn } from "@/lib/utils"
 import { useMockStore } from "@/store/useMockStore"
@@ -83,6 +75,7 @@ export default function StudentDashboardPage() {
   // Local state for Phase 1 simulation
   const [localClaims, setLocalClaims] = useState<Record<number, Claim[]>>({
     1: [],
+    5: [],
   })
 
   useEffect(() => {
@@ -169,7 +162,7 @@ export default function StudentDashboardPage() {
     : store.students["alice"] || defaultStudent
 
   const claimsList = isPhase1
-    ? getPhase1Claims(1)
+    ? getPhase1Claims(activeIteration)
     : store.claims.filter((c) => c.studentId === "alice")
 
   const ITEMS_PER_PAGE = 5
@@ -181,33 +174,9 @@ export default function StudentDashboardPage() {
     startIndex + ITEMS_PER_PAGE
   )
 
-  const getPageNumbers = () => {
-    const pages: (number | "ellipsis")[] = []
-    const maxVisible = 5
-    if (totalPages <= maxVisible) {
-      for (let i = 1; i <= totalPages; i++) {
-        pages.push(i)
-      }
-    } else {
-      pages.push(1)
-      if (safeCurrentPage > 3) {
-        pages.push("ellipsis")
-      }
-      const start = Math.max(2, safeCurrentPage - 1)
-      const end = Math.min(totalPages - 1, safeCurrentPage + 1)
-      for (let i = start; i <= end; i++) {
-        if (!pages.includes(i)) pages.push(i)
-      }
-      if (safeCurrentPage < totalPages - 2) {
-        pages.push("ellipsis")
-      }
-      if (!pages.includes(totalPages)) pages.push(totalPages)
-    }
-    return pages
-  }
 
   const isFormIncompleteForIteration4 =
-    activeIteration === 4 &&
+    activeIteration >= 4 &&
     (!eventName.trim() ||
       !organizer.trim() ||
       !category ||
@@ -217,7 +186,7 @@ export default function StudentDashboardPage() {
 
   const isSubmitDisabled =
     (activeIteration >= 2 && !selectedDate) ||
-    (activeIteration === 4 && isFormIncompleteForIteration4)
+    (activeIteration >= 4 && isFormIncompleteForIteration4)
 
   // Calculated Stats
   const totalPoints = claimsList
@@ -230,12 +199,19 @@ export default function StudentDashboardPage() {
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (file) {
-      if (activeIteration === 4) {
+      if (activeIteration >= 4) {
         if (
           file.type !== "application/pdf" &&
           !file.name.toLowerCase().endsWith(".pdf")
         ) {
           alert("Only PDF files are allowed.")
+          e.target.value = ""
+          setFileName("")
+          setFileBase64("")
+          return
+        }
+        if (file.size > 5 * 1024 * 1024) {
+          toast.error("File size must be smaller than 5MB")
           e.target.value = ""
           setFileName("")
           setFileBase64("")
@@ -247,7 +223,7 @@ export default function StudentDashboardPage() {
       reader.onloadend = () => {
         const resultStr = reader.result as string
         if (
-          activeIteration === 4 &&
+          activeIteration >= 4 &&
           !resultStr.startsWith("data:application/pdf;base64,")
         ) {
           alert("Invalid PDF file format.")
@@ -295,23 +271,38 @@ export default function StudentDashboardPage() {
       }
       setLocalClaims((prev) => ({
         ...prev,
-        [1]: [newClaim, ...(prev[1] || [])],
+        [activeIteration]: [newClaim, ...(prev[activeIteration] || [])],
       }))
+      if (activeIteration >= 5) {
+        toast.success("Claim submitted")
+      }
     } else {
       store.submitClaim(newClaimPayload)
-      if (activeIteration === 4 && activePhase === 3) {
+      if (activeIteration >= 4 && activePhase === 3) {
         const html = generateSubmissionConfirmationHtml("Alice Chen", eventName, formattedDate)
         sendEmail({
           to: "alice@student.edu",
           subject: "Claim Submission Confirmed",
           html,
         }).then((res) => {
-          if (res.error) {
-            toast.error("Failed to send email confirmation")
+          if (activeIteration >= 5) {
+            if (res.error) {
+              toast.error("Could not send confirmation email. Try again")
+            } else {
+              toast.success("Claim submitted. You have been notified")
+            }
           } else {
-            toast.success("Email confirmation sent successfully!")
+            if (res.error) {
+              toast.error("Could not send email confirmation")
+            } else {
+              toast.success("Email confirmation sent")
+            }
           }
         })
+      } else {
+        if (activeIteration >= 5) {
+          toast.success("Claim submitted")
+        }
       }
     }
 
@@ -407,7 +398,7 @@ export default function StudentDashboardPage() {
       {/* Welcome Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <h1 className="text-3xl font-bold tracking-tight">
-          Welcome back, {activeStudent.name}!
+          Welcome back, {activeStudent.name}
         </h1>
 
         {/* Claim Community Merit Button & Dialog */}
@@ -415,20 +406,20 @@ export default function StudentDashboardPage() {
           <DialogTrigger asChild>
             <Button size="lg" className="cursor-pointer shadow-sm">
               <Plus className="h-4 w-4" />
-              <span>New Claim</span>
+              <span>New claim</span>
             </Button>
           </DialogTrigger>
           <DialogContent className="sm:max-w-md">
             <DialogHeader>
-              <DialogTitle>Submit Merit Claim</DialogTitle>
+              <DialogTitle>Submit merit claim</DialogTitle>
               <DialogDescription>
-                Submit details and proof to claim your merit points.
+                Submit details and proof to claim your merit points
               </DialogDescription>
             </DialogHeader>
 
             <form onSubmit={handleSubmit} className="space-y-4 py-2">
               <div className="space-y-2">
-                <Label htmlFor="eventName">Event Name</Label>
+                <Label htmlFor="eventName">Event name</Label>
                 <Input
                   id="eventName"
                   placeholder="e.g. Charity Food Drive 2026"
@@ -512,17 +503,17 @@ export default function StudentDashboardPage() {
               </div>
 
               <div className="space-y-2">
-                <Label>Proof File Upload</Label>
+                <Label>Proof file upload</Label>
                 <Label htmlFor="file-upload" className="block cursor-pointer">
                   <div className="cursor-pointer rounded-2xl border-2 border-dashed border-border bg-muted/20 p-6 text-center transition-colors hover:border-primary/50 hover:bg-muted/40">
                     <Upload className="mx-auto mb-2 h-8 w-8 text-muted-foreground" />
                     <p className="text-sm font-medium text-foreground">
                       {fileName
                         ? `Selected: ${fileName}`
-                        : "Drag & drop your certificate here, or click to browse."}
+                        : "Drag and drop your certificate here, or click to browse"}
                     </p>
                     <p className="mt-1 text-xs text-muted-foreground">
-                      {activeIteration === 4
+                      {activeIteration >= 4
                         ? "Supported formats: PDF (max 5MB)"
                         : "Supported formats: PNG, JPG (max 5MB)"}
                     </p>
@@ -532,7 +523,7 @@ export default function StudentDashboardPage() {
                     id="file-upload"
                     type="file"
                     accept={
-                      activeIteration === 4
+                      activeIteration >= 4
                         ? "application/pdf"
                         : "image/*,application/pdf"
                     }
@@ -553,7 +544,7 @@ export default function StudentDashboardPage() {
                   disabled={isSubmitDisabled}
                   className="cursor-pointer"
                 >
-                  Submit Claim
+                  Submit claim
                 </Button>
               </DialogFooter>
             </form>
@@ -566,7 +557,7 @@ export default function StudentDashboardPage() {
         <Card className="border shadow-xs">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
-              Total Points
+              Total points
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -582,7 +573,7 @@ export default function StudentDashboardPage() {
         <Card className="border shadow-xs">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
-              Pending Claims
+              Pending claims
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -598,7 +589,7 @@ export default function StudentDashboardPage() {
         <Card className="border shadow-xs">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
-              Approved Claims
+              Approved claims
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -614,19 +605,51 @@ export default function StudentDashboardPage() {
 
       {/* Claims Table Card */}
       <Card className="border shadow-xs">
-        <CardHeader>
-          <CardTitle className="text-xl font-semibold">
-            Submitted Claims
-          </CardTitle>
-          <CardDescription>
-            A history of your submitted claims and their status.
-          </CardDescription>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0">
+          <div>
+            <CardTitle className="text-xl font-semibold">
+              Submitted claims
+            </CardTitle>
+            <CardDescription>
+              A history of your submitted claims and their status
+            </CardDescription>
+          </div>
+          {totalPages > 1 && (
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="icon"
+                className="h-7 w-7 cursor-pointer"
+                onClick={() => {
+                  if (safeCurrentPage > 1) {
+                    setCurrentPage(safeCurrentPage - 1)
+                  }
+                }}
+                disabled={safeCurrentPage === 1}
+              >
+                <ChevronLeft className="h-3.5 w-3.5" />
+              </Button>
+              <span className="text-xs font-semibold">{safeCurrentPage} / {totalPages}</span>
+              <Button
+                variant="outline"
+                size="icon"
+                className="h-7 w-7 cursor-pointer"
+                onClick={() => {
+                  if (safeCurrentPage < totalPages) {
+                    setCurrentPage(safeCurrentPage + 1)
+                  }
+                }}
+                disabled={safeCurrentPage === totalPages}
+              >
+                <ChevronRight className="h-3.5 w-3.5" />
+              </Button>
+            </div>
+          )}
         </CardHeader>
         <CardContent>
           {claimsList.length === 0 ? (
             <div className="py-12 text-center text-muted-foreground">
-              No merit claims recorded yet. Click &quot;Claim Community
-              Merit&quot; above to log your first activity.
+              No merit claims recorded yet. Click &quot;New claim&quot; above to log your first activity
             </div>
           ) : (
             <div className="space-y-4">
@@ -634,9 +657,9 @@ export default function StudentDashboardPage() {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Event Name</TableHead>
+                      <TableHead>Event name</TableHead>
                       <TableHead>Category</TableHead>
-                      <TableHead>Date of Activity</TableHead>
+                      <TableHead>Date of activity</TableHead>
                       <TableHead>Organizer</TableHead>
                       <TableHead>Status</TableHead>
                       <TableHead className="text-right">Points</TableHead>
@@ -671,69 +694,11 @@ export default function StudentDashboardPage() {
                   </TableBody>
                 </Table>
               </div>
-
-              {totalPages > 1 && (
-                <Pagination className="mt-4 flex justify-end">
-                  <PaginationContent>
-                    <PaginationItem>
-                      <PaginationPrevious
-                        href="#"
-                        onClick={(e) => {
-                          e.preventDefault()
-                          if (safeCurrentPage > 1) {
-                            setCurrentPage(safeCurrentPage - 1)
-                          }
-                        }}
-                        className={cn(
-                          "cursor-pointer",
-                          safeCurrentPage === 1 &&
-                            "pointer-events-none opacity-50"
-                        )}
-                      />
-                    </PaginationItem>
-                    {getPageNumbers().map((page, index) => (
-                      <PaginationItem key={index}>
-                        {page === "ellipsis" ? (
-                          <PaginationEllipsis />
-                        ) : (
-                          <PaginationLink
-                            href="#"
-                            isActive={page === safeCurrentPage}
-                            onClick={(e) => {
-                              e.preventDefault()
-                              setCurrentPage(page)
-                            }}
-                            className="cursor-pointer"
-                          >
-                            {page}
-                          </PaginationLink>
-                        )}
-                      </PaginationItem>
-                    ))}
-                    <PaginationItem>
-                      <PaginationNext
-                        href="#"
-                        onClick={(e) => {
-                          e.preventDefault()
-                          if (safeCurrentPage < totalPages) {
-                            setCurrentPage(safeCurrentPage + 1)
-                          }
-                        }}
-                        className={cn(
-                          "cursor-pointer",
-                          safeCurrentPage === totalPages &&
-                            "pointer-events-none opacity-50"
-                        )}
-                      />
-                    </PaginationItem>
-                  </PaginationContent>
-                </Pagination>
-              )}
             </div>
           )}
         </CardContent>
       </Card>
-      <Toaster position="top-right" closeButton richColors />
+      <Toaster position="top-right" closeButton={activeIteration < 5} richColors />
     </div>
   )
 }

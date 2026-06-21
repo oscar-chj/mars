@@ -1,6 +1,6 @@
 "use client"
 
-import { CheckCircle2, Mail, Play, RotateCcw, Search, Send } from "lucide-react"
+import { CheckCircle2, ChevronLeft, ChevronRight, Mail, Play, RotateCcw, Search, Send } from "lucide-react"
 import { useEffect, useState } from "react"
 import { Toaster, toast } from "sonner"
 
@@ -16,15 +16,7 @@ import {
   DrawerTitle,
 } from "@/components/ui/drawer"
 import { Input } from "@/components/ui/input"
-import {
-  Pagination,
-  PaginationContent,
-  PaginationEllipsis,
-  PaginationItem,
-  PaginationLink,
-  PaginationNext,
-  PaginationPrevious,
-} from "@/components/ui/pagination"
+
 import {
   Select,
   SelectContent,
@@ -234,6 +226,7 @@ export default function AdminLogsPage() {
       2: [...baseLogs],
       3: [...baseLogs],
       4: [...baseLogs],
+      5: [...baseLogs],
     })
   )
 
@@ -250,50 +243,82 @@ export default function AdminLogsPage() {
   const handleAction = (actionName: string) => {
     if (!selectedLog) return
 
-    const updatedLog = { ...selectedLog, emailStatus: "DELIVERED" as const }
-    setSelectedLog(updatedLog)
+    if (activeIteration >= 5) {
+      const now = new Date()
+      const pad = (n: number) => String(n).padStart(2, "0")
+      const timestamp = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`
 
-    // Update locally in localLogs state
-    setLocalLogs((prev) => {
-      const updated = { ...prev }
-      const currentLogs = prev[activeIteration] || []
-      updated[activeIteration] = currentLogs.map((log) =>
-        log.id === selectedLog.id
-          ? { ...log, emailStatus: "DELIVERED" as const }
-          : log
-      )
-      return updated
-    })
+      const emailSubject = selectedLog.emailSubject.startsWith(actionName)
+        ? selectedLog.emailSubject
+        : `${actionName}: ${selectedLog.emailSubject}`
 
-    // Also update mock store if we are not in phase 1 claims
-    if (activePhase !== 1) {
-      useMockStore.setState((state) => {
-        const updatedLogs = state.logs.map((log) =>
+      const newLog: SystemLog = {
+        id: `log-${Date.now()}`,
+        timestamp,
+        eventType: selectedLog.eventType,
+        description: `Email dispatch: ${actionName} for ${selectedLog.emailSubject}`,
+        recipientEmail: selectedLog.recipientEmail,
+        emailSubject,
+        emailBody: "",
+        emailStatus: "DELIVERED" as const,
+      }
+
+      setLocalLogs((prev) => {
+        const updated = { ...prev }
+        const currentLogs = prev[activeIteration] || baseLogs
+        updated[activeIteration] = [newLog, ...currentLogs]
+        return updated
+      })
+
+      if (activePhase !== 1) {
+        store.addLog(newLog)
+      }
+    } else {
+      const updatedLog = { ...selectedLog, emailStatus: "DELIVERED" as const }
+      setSelectedLog(updatedLog)
+
+      // Update locally in localLogs state
+      setLocalLogs((prev) => {
+        const updated = { ...prev }
+        const currentLogs = prev[activeIteration] || []
+        updated[activeIteration] = currentLogs.map((log) =>
           log.id === selectedLog.id
             ? { ...log, emailStatus: "DELIVERED" as const }
             : log
         )
-        const currentIter =
-          state.claims === state.claims4
-            ? 4
-            : state.claims === state.claims3
-              ? 3
-              : state.claims === state.claims2
-                ? 2
-                : 1
-        if (currentIter === 4) {
-          return { logs: updatedLogs, logs4: updatedLogs }
-        } else if (currentIter === 3) {
-          return { logs: updatedLogs, logs3: updatedLogs }
-        } else if (currentIter === 2) {
-          return { logs: updatedLogs, logs2: updatedLogs }
-        } else {
-          return { logs: updatedLogs, logs1: updatedLogs }
-        }
+        return updated
       })
+
+      // Also update mock store if we are not in phase 1 claims
+      if (activePhase !== 1) {
+        useMockStore.setState((state) => {
+          const updatedLogs = state.logs.map((log) =>
+            log.id === selectedLog.id
+              ? { ...log, emailStatus: "DELIVERED" as const }
+              : log
+          )
+          const currentIter =
+            state.claims === state.claims4
+              ? 4
+              : state.claims === state.claims3
+                ? 3
+                : state.claims === state.claims2
+                  ? 2
+                  : 1
+          if (currentIter === 4) {
+            return { logs: updatedLogs, logs4: updatedLogs }
+          } else if (currentIter === 3) {
+            return { logs: updatedLogs, logs3: updatedLogs }
+          } else if (currentIter === 2) {
+            return { logs: updatedLogs, logs2: updatedLogs }
+          } else {
+            return { logs: updatedLogs, logs1: updatedLogs }
+          }
+        })
+      }
     }
 
-    if (activeIteration === 4 && activePhase === 3) {
+    if (activeIteration >= 4 && activePhase === 3) {
       const html = generateResendNotificationHtml(
         selectedLog.recipientEmail,
         selectedLog.emailSubject,
@@ -301,19 +326,33 @@ export default function AdminLogsPage() {
       )
       sendEmail({
         to: selectedLog.recipientEmail,
-        subject: `${actionName}: ${selectedLog.emailSubject}`,
+        subject: selectedLog.emailSubject.startsWith(actionName)
+          ? selectedLog.emailSubject
+          : `${actionName}: ${selectedLog.emailSubject}`,
         html,
       }).then((res) => {
         if (res.error) {
-          toast.error(`Failed to execute ${actionName}`)
+          if (activeIteration >= 5) {
+            toast.error("Could not execute action. Try again")
+          } else {
+            toast.error(`Failed to execute ${actionName}`)
+          }
         } else {
-          toast.success(`${actionName} sent successfully!`)
+          if (activeIteration >= 5) {
+            toast.success("Email sent")
+          } else {
+            toast.success(`${actionName} sent successfully!`)
+          }
         }
       })
     } else {
-      toast.success(`${actionName} Success`, {
-        description: `Log status has been updated to DELIVERED.`,
-      })
+      if (activeIteration >= 5) {
+        toast.success("Email sent")
+      } else {
+        toast.success(`${actionName} Success`, {
+          description: `Log status has been updated to DELIVERED.`,
+        })
+      }
     }
   }
 
@@ -351,101 +390,7 @@ export default function AdminLogsPage() {
   const endIndex = startIndex + itemsPerPage
   const paginatedLogs = filteredLogs.slice(startIndex, endIndex)
 
-  const renderPaginationItems = () => {
-    const items = []
-    const maxVisible = 5
 
-    if (totalPages <= maxVisible) {
-      for (let i = 1; i <= totalPages; i++) {
-        items.push(
-          <PaginationItem key={i}>
-            <PaginationLink
-              isActive={currentPage === i}
-              onClick={(e) => {
-                e.preventDefault()
-                setCurrentPage(i)
-              }}
-              href="#"
-              className="cursor-pointer"
-            >
-              {i}
-            </PaginationLink>
-          </PaginationItem>
-        )
-      }
-    } else {
-      // Always show page 1
-      items.push(
-        <PaginationItem key={1}>
-          <PaginationLink
-            isActive={currentPage === 1}
-            onClick={(e) => {
-              e.preventDefault()
-              setCurrentPage(1)
-            }}
-            href="#"
-            className="cursor-pointer"
-          >
-            1
-          </PaginationLink>
-        </PaginationItem>
-      )
-
-      if (currentPage > 3) {
-        items.push(
-          <PaginationItem key="ellipsis-start">
-            <PaginationEllipsis />
-          </PaginationItem>
-        )
-      }
-
-      const start = Math.max(2, currentPage - 1)
-      const end = Math.min(totalPages - 1, currentPage + 1)
-      for (let i = start; i <= end; i++) {
-        items.push(
-          <PaginationItem key={i}>
-            <PaginationLink
-              isActive={currentPage === i}
-              onClick={(e) => {
-                e.preventDefault()
-                setCurrentPage(i)
-              }}
-              href="#"
-              className="cursor-pointer"
-            >
-              {i}
-            </PaginationLink>
-          </PaginationItem>
-        )
-      }
-
-      if (currentPage < totalPages - 2) {
-        items.push(
-          <PaginationItem key="ellipsis-end">
-            <PaginationEllipsis />
-          </PaginationItem>
-        )
-      }
-
-      items.push(
-        <PaginationItem key={totalPages}>
-          <PaginationLink
-            isActive={currentPage === totalPages}
-            onClick={(e) => {
-              e.preventDefault()
-              setCurrentPage(totalPages)
-            }}
-            href="#"
-            className="cursor-pointer"
-          >
-            {totalPages}
-          </PaginationLink>
-        </PaginationItem>
-      )
-    }
-
-    return items
-  }
 
   // Simulated notification triggers for testability
   const handleSimulateDispatch = () => {
@@ -549,19 +494,19 @@ export default function AdminLogsPage() {
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">
-            {activeIteration >= 2 ? "System Logs" : "System Activity Logs"}
+            {activeIteration >= 2 ? "System logs" : "System activity logs"}
           </h1>
           <p className="mt-1 text-muted-foreground">
             Monitor system events and email delivery status.
           </p>
         </div>
-        {!(activeIteration === 4 && activePhase === 3) && (
+        {!(activeIteration >= 4 && activePhase === 3) && (
           <Button
             onClick={handleSimulateDispatch}
             className="flex cursor-pointer items-center gap-1.5 sm:self-end"
           >
             <Play className="h-4 w-4 fill-current" />
-            Simulate Dispatch
+            Simulate dispatch
           </Button>
         )}
       </div>
@@ -569,7 +514,7 @@ export default function AdminLogsPage() {
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <Card className="overflow-hidden border shadow-sm">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Logs</CardTitle>
+            <CardTitle className="text-sm font-medium">Total logs</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{totalCount}</div>
@@ -585,7 +530,7 @@ export default function AdminLogsPage() {
               {deliveredCount}
             </div>
             <p className="mt-1 text-xs text-muted-foreground">
-              Sent emails successfully delivered
+              Sent emails delivered
             </p>
           </CardContent>
         </Card>
@@ -598,14 +543,14 @@ export default function AdminLogsPage() {
               {sentCount}
             </div>
             <p className="mt-1 text-xs text-muted-foreground">
-              Emails sent out
+              Emails sent
             </p>
           </CardContent>
         </Card>
         <Card className="overflow-hidden border shadow-sm">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
-              Delivery Failures
+              Delivery failures
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -613,7 +558,7 @@ export default function AdminLogsPage() {
               {bouncedCount}
             </div>
             <p className="mt-1 text-xs text-muted-foreground">
-              Failed delivery attempts
+              Could not deliver emails
             </p>
           </CardContent>
         </Card>
@@ -624,7 +569,7 @@ export default function AdminLogsPage() {
         <div className="relative">
           <Search className="absolute top-2.5 left-3 h-4 w-4 text-muted-foreground" />
           <Input
-            placeholder="Search"
+            placeholder="Search logs"
             value={search}
             onChange={(e) => {
               setSearch(e.target.value)
@@ -658,11 +603,11 @@ export default function AdminLogsPage() {
             }}
           >
             <SelectTrigger className="w-[140px] cursor-pointer">
-              <SelectValue placeholder="All Statuses" />
+              <SelectValue placeholder="All statuses" />
             </SelectTrigger>
             <SelectContent>
               <SelectItem className="cursor-pointer" value="ALL">
-                All Statuses
+                All statuses
               </SelectItem>
               <SelectItem className="cursor-pointer" value="DELIVERED">
                 Delivered
@@ -684,17 +629,17 @@ export default function AdminLogsPage() {
             }}
           >
             <SelectTrigger className="w-[180px] cursor-pointer">
-              <SelectValue placeholder="All Event Types" />
+              <SelectValue placeholder="All event types" />
             </SelectTrigger>
             <SelectContent>
               <SelectItem className="cursor-pointer" value="ALL">
-                All Event Types
+                All event types
               </SelectItem>
               <SelectItem className="cursor-pointer" value="CLAIM_SUBMISSION">
-                Claim Submission
+                Claim submission
               </SelectItem>
               <SelectItem className="cursor-pointer" value="CLAIM_DECISION">
-                Claim Decision
+                Claim decision
               </SelectItem>
             </SelectContent>
           </Select>
@@ -704,11 +649,45 @@ export default function AdminLogsPage() {
       {/* Logs Table */}
       <Card className="overflow-hidden border shadow-sm">
         <CardContent className="space-y-4">
+          <div className="flex items-center justify-between">
+            <span className="text-xs text-muted-foreground">
+              Showing {startIndex + 1} to {Math.min(endIndex, totalItems)} of {totalItems} logs
+            </span>
+            {totalPages > 1 && (
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="h-7 w-7 cursor-pointer"
+                  onClick={() => {
+                    if (currentPage > 1) setCurrentPage(currentPage - 1)
+                  }}
+                  disabled={currentPage === 1}
+                >
+                  <ChevronLeft className="h-3.5 w-3.5" />
+                </Button>
+                <span className="text-xs font-semibold">
+                  {currentPage} / {totalPages}
+                </span>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="h-7 w-7 cursor-pointer"
+                  onClick={() => {
+                    if (currentPage < totalPages) setCurrentPage(currentPage + 1)
+                  }}
+                  disabled={currentPage === totalPages}
+                >
+                  <ChevronRight className="h-3.5 w-3.5" />
+                </Button>
+              </div>
+            )}
+          </div>
           <Table>
             <TableHeader>
               <TableRow>
                 <TableHead className="w-[180px]">Timestamp</TableHead>
-                <TableHead className="w-[180px]">Event Type</TableHead>
+                <TableHead className="w-[180px]">Event type</TableHead>
                 <TableHead className="w-[200px]">Recipient</TableHead>
                 <TableHead>Subject</TableHead>
                 <TableHead className="w-[120px]">Status</TableHead>
@@ -766,48 +745,6 @@ export default function AdminLogsPage() {
               )}
             </TableBody>
           </Table>
-
-          {totalPages > 1 && (
-            <div className="flex items-center justify-between border-t border-border pt-4">
-              <div className="text-xs text-muted-foreground">
-                Showing {startIndex + 1} to {Math.min(endIndex, totalItems)} of{" "}
-                {totalItems} logs
-              </div>
-              <Pagination className="mx-0 w-auto justify-end">
-                <PaginationContent>
-                  <PaginationItem>
-                    <PaginationPrevious
-                      href="#"
-                      onClick={(e) => {
-                        e.preventDefault()
-                        if (currentPage > 1) setCurrentPage(currentPage - 1)
-                      }}
-                      className={cn(
-                        "cursor-pointer",
-                        currentPage === 1 && "pointer-events-none opacity-50"
-                      )}
-                    />
-                  </PaginationItem>
-                  {renderPaginationItems()}
-                  <PaginationItem>
-                    <PaginationNext
-                      href="#"
-                      onClick={(e) => {
-                        e.preventDefault()
-                        if (currentPage < totalPages)
-                          setCurrentPage(currentPage + 1)
-                      }}
-                      className={cn(
-                        "cursor-pointer",
-                        currentPage === totalPages &&
-                          "pointer-events-none opacity-50"
-                      )}
-                    />
-                  </PaginationItem>
-                </PaginationContent>
-              </Pagination>
-            </div>
-          )}
         </CardContent>
       </Card>
 
@@ -819,7 +756,7 @@ export default function AdminLogsPage() {
       >
         <DrawerContent
           className={cn(
-            activeIteration === 4 &&
+            activeIteration >= 4 &&
               "data-[vaul-drawer-direction=right]:sm:max-w-[35vw]"
           )}
         >
@@ -827,7 +764,7 @@ export default function AdminLogsPage() {
             <DrawerHeader>
               <DrawerTitle className="flex items-center gap-2 text-xl font-bold">
                 <Mail className="text-primary" />
-                <span>Inspect Email</span>
+                <span>Inspect email</span>
               </DrawerTitle>
             </DrawerHeader>
 
@@ -837,35 +774,35 @@ export default function AdminLogsPage() {
                   {/* SMTP Header Details */}
                   <div className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-2.5 text-xs">
                     <span className="font-medium text-muted-foreground">
-                      FROM
+                      From
                     </span>
                     <span className="truncate text-foreground">
                       no-reply@mars.upm.edu.my
                     </span>
 
                     <span className="font-medium text-muted-foreground">
-                      TO
+                      To
                     </span>
                     <span className="truncate text-foreground">
                       {selectedLog.recipientEmail}
                     </span>
 
                     <span className="font-medium text-muted-foreground">
-                      SUBJECT
+                      Subject
                     </span>
                     <span className="truncate font-semibold text-foreground">
                       {selectedLog.emailSubject}
                     </span>
 
                     <span className="font-medium text-muted-foreground">
-                      DATE
+                      Date
                     </span>
                     <span className="text-foreground">
                       {selectedLog.timestamp}
                     </span>
 
                     <span className="font-medium text-muted-foreground">
-                      STATUS
+                      Status
                     </span>
                     <span>{getStatusBadge(selectedLog.emailStatus)}</span>
                   </div>
@@ -874,8 +811,8 @@ export default function AdminLogsPage() {
 
                   {/* Email Preview */}
                   <div className="flex flex-col gap-2">
-                    <span className="text-xs font-semibold tracking-wider text-muted-foreground uppercase">
-                      Email Preview
+                    <span className="text-xs font-semibold tracking-wider text-muted-foreground">
+                      Email preview
                     </span>
                     <EmailBodyFrame log={selectedLog} />
                   </div>
@@ -901,30 +838,30 @@ export default function AdminLogsPage() {
                         <Button
                           variant="destructive"
                           className="w-full cursor-pointer"
-                          onClick={() => handleAction("Retry Delivery")}
+                          onClick={() => handleAction("Retry delivery")}
                         >
                           <Send />
-                          Retry Delivery
+                          Retry delivery
                         </Button>
                       )}
                       {selectedLog.emailStatus === "SENT" && (
                         <Button
                           variant="default"
                           className="w-full cursor-pointer"
-                          onClick={() => handleAction("Force Send")}
+                          onClick={() => handleAction("Force send")}
                         >
                           <CheckCircle2 />
-                          Force Send
+                          Force send
                         </Button>
                       )}
                       {selectedLog.emailStatus === "DELIVERED" && (
                         <Button
                           variant="secondary"
                           className="w-full cursor-pointer"
-                          onClick={() => handleAction("Resend Email")}
+                          onClick={() => handleAction("Resend email")}
                         >
                           <RotateCcw />
-                          Resend Email
+                          Resend email
                         </Button>
                       )}
                     </div>
@@ -934,7 +871,7 @@ export default function AdminLogsPage() {
           </div>
         </DrawerContent>
       </Drawer>
-      <Toaster position="top-right" closeButton richColors />
+      <Toaster position="top-right" closeButton={activeIteration < 5} richColors />
     </div>
   )
 }

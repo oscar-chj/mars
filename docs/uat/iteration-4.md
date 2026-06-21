@@ -15,4 +15,14 @@ This document tracks UX, styling, and service integration complaints for Iterati
 ## 3. Non-user-friendly Toaster Notifications
 
 - **Complaint:** The toast messages displayed to students and admins are overly technical (e.g., mentioning email confirmation success or double status messages on approval). Toasters should be concise, clear, and focused on user-facing notifications.
-- **Status:** Resolved.
+- **Status:** Pending (to be resolved in Iteration 5).
+
+## 4. PDF Max Size Constraint Not Enforced
+
+- **Complaint:** The student portal does not enforce the 5MB PDF file size limit when a student selects a file to upload. It allows files larger than 5MB to be processed.
+- **Status:** Pending (to be resolved in Iteration 5).
+
+## 5. UI Microcopy and UX Writing Compliance
+
+- **Complaint:** Toast messages, button labels, titles, descriptions, and headers do not comply with the UX writing rules defined in docs/better-ux-writing.txt (e.g., they do not use sentence case, contain banned words like "successfully" or "failed to", include exclamation marks in error messages/standalone microcopy, or lack informative/concise phrasing).
+- **Status:** Pending (to be resolved in Iteration 5).

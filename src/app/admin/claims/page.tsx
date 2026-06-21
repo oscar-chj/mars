@@ -4,6 +4,8 @@ import {
   ArrowLeft,
   Award,
   CheckCircle2,
+  ChevronLeft,
+  ChevronRight,
   Clock,
   RotateCcw,
   XCircle,
@@ -29,14 +31,7 @@ import { useMockStore } from "@/store/useMockStore"
 import { Claim, Student } from "@/types/claims"
 import { sendEmail } from "@/lib/email"
 import { generateApprovalHtml, generateRejectionHtml } from "@/lib/email-templates"
-import {
-  Pagination,
-  PaginationContent,
-  PaginationItem,
-  PaginationLink,
-  PaginationNext,
-  PaginationPrevious,
-} from "@/components/ui/pagination"
+
 
 export default function AdminClaimsPage() {
   const { activePhase, activeIteration } = usePhase()
@@ -294,7 +289,7 @@ export default function AdminClaimsPage() {
     if (!activeClaim) return
     const pts = parseInt(pointsInput || defaultPoints, 10)
     if (isNaN(pts) || pts <= 0) {
-      toast.error("Please enter a valid positive number of points to award.")
+      toast.error("Enter a valid positive number of points to award")
       return
     }
 
@@ -329,14 +324,22 @@ export default function AdminClaimsPage() {
           },
         }))
       }
-      toast.success(
-        `[Static Mock] Claim approved. Student awarded ${pts} points locally.`
-      )
+      if (activeIteration >= 5) {
+        toast.success("Claim approved")
+      } else {
+        toast.success(
+          `[Static mock] Claim approved and student awarded ${pts} points locally`
+        )
+      }
     } else {
       // Zustand global update
       store.approveClaim(activeClaim.id, pts)
-      toast.success(`Claim approved. Student awarded ${pts} points.`)
-      if (activeIteration === 4 && activePhase === 3) {
+      if (activeIteration >= 5) {
+        toast.success("Claim approved")
+      } else {
+        toast.success(`Claim approved and student awarded ${pts} points`)
+      }
+      if (activeIteration >= 4 && activePhase === 3) {
         const student = store.students[activeClaim.studentId]
         const currentPoints = student ? student.points : 0
         const newBalance = currentPoints + pts
@@ -346,10 +349,12 @@ export default function AdminClaimsPage() {
           subject: "Claim Approved",
           html,
         }).then((res) => {
-          if (res.error) {
-            toast.error("Failed to send approval email")
-          } else {
-            toast.success("Approval email sent successfully!")
+          if (activeIteration < 5) {
+            if (res.error) {
+              toast.error("Could not send approval email. Try again")
+            } else {
+              toast.success("Approval email sent")
+            }
           }
         })
       }
@@ -375,11 +380,19 @@ export default function AdminClaimsPage() {
           ),
         ],
       }))
-      toast.error("[Static Mock] Claim rejected locally.")
+      if (activeIteration >= 5) {
+        toast.error("Claim rejected")
+      } else {
+        toast.error("[Static mock] Claim rejected locally")
+      }
     } else {
       store.rejectClaim(activeClaim.id)
-      toast.error("Claim rejected. Student has been notified.")
-      if (activeIteration === 4 && activePhase === 3) {
+      if (activeIteration >= 5) {
+        toast.error("Claim rejected")
+      } else {
+        toast.error("Claim rejected and student notified")
+      }
+      if (activeIteration >= 4 && activePhase === 3) {
         const html = generateRejectionHtml(
           activeClaim.studentName,
           activeClaim.eventName,
@@ -390,10 +403,12 @@ export default function AdminClaimsPage() {
           subject: "Claim Rejected",
           html,
         }).then((res) => {
-          if (res.error) {
-            toast.error("Failed to send rejection email")
-          } else {
-            toast.success("Rejection email sent successfully!")
+          if (activeIteration < 5) {
+            if (res.error) {
+              toast.error("Could not send rejection email. Try again")
+            } else {
+              toast.success("Rejection email sent")
+            }
           }
         })
       }
@@ -411,10 +426,10 @@ export default function AdminClaimsPage() {
           prev[activeIteration as number] || []
         ).filter((c) => c.id !== activeClaim.id),
       }))
-      toast.info("[Static Mock] Claim reset to default pending status.")
+      toast.info("[Static mock] Claim reset to default pending status")
     } else {
       store.resetStore()
-      toast.info("Zustand store reset to initial values.")
+      toast.info("Zustand store reset to initial values")
     }
   }
 
@@ -427,17 +442,17 @@ export default function AdminClaimsPage() {
             variant="outline"
           >
             <Clock className="mr-1 h-3 w-3" />
-            PENDING
+            Pending
           </Badge>
         )
       case "APPROVED":
         return (
           <Badge
-            className="border-emerald-500/20 bg-emerald-500/10 font-medium text-emerald-600 hover:bg-emerald-500/20 dark:text-emerald-400"
+            className="border-emerald-500/20 bg-emerald-500/10 font-medium text-emerald-600 hover:bg-emerald-500/20 dark:text-amber-400"
             variant="outline"
           >
             <CheckCircle2 className="mr-1 h-3 w-3" />
-            APPROVED
+            Approved
           </Badge>
         )
       case "REJECTED":
@@ -447,7 +462,7 @@ export default function AdminClaimsPage() {
             variant="outline"
           >
             <XCircle className="mr-1 h-3 w-3" />
-            REJECTED
+            Rejected
           </Badge>
         )
     }
@@ -461,7 +476,7 @@ export default function AdminClaimsPage() {
             variant="outline"
             className="border-blue-500/20 bg-blue-500/5 text-blue-600 dark:text-blue-400"
           >
-            ACADEMIC
+            Academic
           </Badge>
         )
       case "VOLUNTEERING":
@@ -470,7 +485,7 @@ export default function AdminClaimsPage() {
             variant="outline"
             className="border-purple-500/20 bg-purple-500/5 text-purple-600 dark:text-purple-400"
           >
-            VOLUNTEERING
+            Volunteering
           </Badge>
         )
       case "SPORTS":
@@ -479,7 +494,7 @@ export default function AdminClaimsPage() {
             variant="outline"
             className="border-orange-500/20 bg-orange-500/5 text-orange-600 dark:text-orange-400"
           >
-            SPORTS
+            Sports
           </Badge>
         )
       case "CULTURAL":
@@ -488,7 +503,7 @@ export default function AdminClaimsPage() {
             variant="outline"
             className="border-pink-500/20 bg-pink-500/5 text-pink-600 dark:text-pink-400"
           >
-            CULTURAL
+            Cultural
           </Badge>
         )
     }
@@ -519,8 +534,8 @@ export default function AdminClaimsPage() {
         <div>
           <h1 className="text-3xl font-bold tracking-tight">
             {activeIteration >= 2
-              ? "Claims Queue"
-              : "Admin Claims Inbox"}
+              ? "Claims queue"
+              : "Admin claims inbox"}
           </h1>
           <p className="mt-1 text-muted-foreground">
             Review submitted student claims, verify certificates, and award
@@ -532,7 +547,7 @@ export default function AdminClaimsPage() {
             className="border-amber-500/20 bg-amber-500/10 px-3 py-1 text-sm font-semibold text-amber-600 dark:text-amber-400"
             variant="outline"
           >
-            {pendingCount} Pending
+            {pendingCount} pending
           </Badge>
         </div>
       </div>
@@ -548,14 +563,9 @@ export default function AdminClaimsPage() {
         >
           <Card className="border shadow-sm">
             <CardHeader className="space-y-3 pb-3">
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-lg font-semibold">
-                  Claims Queue
-                </CardTitle>
-                <span className="text-xs font-normal text-muted-foreground">
-                  Showing {paginatedClaims.length} of {filteredClaims.length}
-                </span>
-              </div>
+              <CardTitle className="text-lg font-semibold">
+                Claims queue
+              </CardTitle>
               <Tabs value={filter} onValueChange={(v) => setFilter(v as never)}>
                 <TabsList>
                   <TabsTrigger value="ALL">All</TabsTrigger>
@@ -564,6 +574,36 @@ export default function AdminClaimsPage() {
                   <TabsTrigger value="REJECTED">Rejected</TabsTrigger>
                 </TabsList>
               </Tabs>
+              <div className="flex items-center justify-between pt-1">
+                <span className="text-xs text-muted-foreground">
+                  Showing {paginatedClaims.length} of {filteredClaims.length}
+                </span>
+                {totalPages > 1 && (
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      className="h-7 w-7 cursor-pointer"
+                      disabled={currentPage === 1}
+                      onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                    >
+                      <ChevronLeft className="h-3.5 w-3.5" />
+                    </Button>
+                    <span className="text-xs text-muted-foreground">
+                      {currentPage} / {totalPages}
+                    </span>
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      className="h-7 w-7 cursor-pointer"
+                      disabled={currentPage === totalPages}
+                      onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                    >
+                      <ChevronRight className="h-3.5 w-3.5" />
+                    </Button>
+                  </div>
+                )}
+              </div>
             </CardHeader>
             <CardContent className="p-0">
               {filteredClaims.length === 0 ? (
@@ -608,62 +648,6 @@ export default function AdminClaimsPage() {
                       )
                     })}
                   </div>
-
-                  {totalPages > 1 && (
-                    <div className="border-t bg-background p-4">
-                      <Pagination>
-                        <PaginationContent>
-                          <PaginationItem>
-                            <PaginationPrevious
-                              href="#"
-                              onClick={(e) => {
-                                e.preventDefault()
-                                if (currentPage > 1) {
-                                  setCurrentPage((prev) => prev - 1)
-                                }
-                              }}
-                              className={cn(
-                                currentPage === 1 &&
-                                  "pointer-events-none opacity-50"
-                              )}
-                            />
-                          </PaginationItem>
-                          {Array.from({ length: totalPages }).map((_, idx) => {
-                            const pageNum = idx + 1
-                            return (
-                              <PaginationItem key={pageNum}>
-                                <PaginationLink
-                                  href="#"
-                                  isActive={currentPage === pageNum}
-                                  onClick={(e) => {
-                                    e.preventDefault()
-                                    setCurrentPage(pageNum)
-                                  }}
-                                >
-                                  {pageNum}
-                                </PaginationLink>
-                              </PaginationItem>
-                            )
-                          })}
-                          <PaginationItem>
-                            <PaginationNext
-                              href="#"
-                              onClick={(e) => {
-                                e.preventDefault()
-                                if (currentPage < totalPages) {
-                                  setCurrentPage((prev) => prev + 1)
-                                }
-                              }}
-                              className={cn(
-                                currentPage === totalPages &&
-                                  "pointer-events-none opacity-50"
-                              )}
-                            />
-                          </PaginationItem>
-                        </PaginationContent>
-                      </Pagination>
-                    </div>
-                  )}
                 </div>
               )}
             </CardContent>
@@ -682,7 +666,7 @@ export default function AdminClaimsPage() {
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
                 <div className="space-y-1">
                   <CardTitle className="text-xl font-semibold">
-                    Claim Details
+                    Claim details
                   </CardTitle>
                   <CardDescription>
                     Verify the submitted details and proof below.
@@ -696,7 +680,7 @@ export default function AdminClaimsPage() {
                   className="cursor-pointer lg:hidden"
                 >
                   <ArrowLeft className="h-4 w-4" />
-                  <span>Back to Queue</span>
+                  <span>Back to queue</span>
                 </Button>
               </CardHeader>
 
@@ -705,7 +689,7 @@ export default function AdminClaimsPage() {
                 <div className="grid grid-cols-1 gap-4 rounded-xl border border-border bg-muted/20 p-4 text-sm md:grid-cols-2 dark:bg-muted/5">
                   <div>
                     <span className="block text-xs text-muted-foreground">
-                      Student Name
+                      Student name
                     </span>
                     <span className="font-medium text-foreground">
                       {activeClaim.studentName}
@@ -715,7 +699,7 @@ export default function AdminClaimsPage() {
                     <>
                       <div>
                         <span className="block text-xs text-muted-foreground">
-                          Matric Number
+                          Matric number
                         </span>
                         <span className="font-mono text-xs font-semibold text-foreground">
                           {formatMatric(activeStudentInfo.matricNumber)}
@@ -723,7 +707,7 @@ export default function AdminClaimsPage() {
                       </div>
                       <div>
                         <span className="block text-xs text-muted-foreground">
-                          Total Points
+                          Total points
                         </span>
                         <span className="font-semibold text-foreground">
                           {activeStudentInfo.points} pts
@@ -731,7 +715,7 @@ export default function AdminClaimsPage() {
                       </div>
                       <div className="md:col-span-2">
                         <span className="block text-xs text-muted-foreground">
-                          Email Address
+                          Email address
                         </span>
                         <span className="font-medium text-foreground">
                           {activeStudentInfo.email}
@@ -741,7 +725,7 @@ export default function AdminClaimsPage() {
                   )}
                   <div className="mt-1 border-t border-border pt-2 md:col-span-2">
                     <span className="block text-xs text-muted-foreground">
-                      Event Name
+                      Event name
                     </span>
                     <span className="font-medium text-foreground">
                       {activeClaim.eventName}
@@ -765,7 +749,7 @@ export default function AdminClaimsPage() {
                   </div>
                   <div>
                     <span className="block text-xs text-muted-foreground">
-                      Date of Submission / Event
+                      Date of submission or event
                     </span>
                     <span className="font-medium text-foreground">
                       {activeClaim.date}
@@ -773,7 +757,7 @@ export default function AdminClaimsPage() {
                   </div>
                   <div>
                     <span className="block text-xs text-muted-foreground">
-                      Review Status
+                      Review status
                     </span>
                     <div className="mt-0.5">
                       {getStatusBadge(activeClaim.status)}
@@ -783,10 +767,10 @@ export default function AdminClaimsPage() {
                     activeClaim.pointsAwarded !== null && (
                       <div className="mt-1 border-t border-border pt-2 md:col-span-2">
                         <span className="block text-xs text-muted-foreground">
-                          Points Awarded
+                          Points awarded
                         </span>
                         <span className="text-lg font-bold text-emerald-600 dark:text-emerald-400">
-                          {activeClaim.pointsAwarded} Points
+                          {activeClaim.pointsAwarded} points
                         </span>
                       </div>
                     )}
@@ -795,10 +779,10 @@ export default function AdminClaimsPage() {
                 {/* Certificate Preview Box */}
                 <div className="space-y-2">
                   <span className="block text-xs font-semibold tracking-wider text-muted-foreground uppercase">
-                    Certificate Preview
+                    Certificate preview
                   </span>
 
-                  {(activeIteration as number) === 4 ? (
+                  {(activeIteration as number) >= 4 ? (
                     activeClaim.proofBase64 &&
                     activeClaim.proofBase64.startsWith(
                       "data:application/pdf;base64,"
@@ -808,7 +792,7 @@ export default function AdminClaimsPage() {
                       // eslint-disable-next-line @next/next/no-img-element
                       <img
                         src={activeClaim.proofBase64 || "/mock-cert.png"}
-                        alt="Certificate Preview"
+                        alt="Certificate preview"
                         className="mx-auto max-h-[500px] w-full rounded-md border border-border bg-muted/5 object-contain shadow-inner"
                       />
                     )
@@ -827,12 +811,12 @@ export default function AdminClaimsPage() {
                       {/* Cert Title */}
                       <div className="z-10 space-y-1 pt-2 text-center">
                         <div className="font-sans text-[10px] font-semibold tracking-widest text-amber-800/80 uppercase dark:text-amber-300/80">
-                          Certificate of Achievement
+                          Certificate of achievement
                         </div>
                         <h3 className="text-xl font-bold tracking-tight text-amber-900 dark:text-amber-400">
                           {activeIteration >= 2
-                            ? "ACTIVITY RECORD RECORDING"
-                            : "COMMUNITY MERIT"}
+                            ? "Activity record recording"
+                            : "Community merit"}
                         </h3>
                       </div>
 
@@ -858,7 +842,7 @@ export default function AdminClaimsPage() {
                         {/* Date segment */}
                         <div className="space-y-0.5 text-left">
                           <span className="block font-sans text-[9px] text-amber-800/60 uppercase dark:text-amber-400/60">
-                            Date of Activity
+                            Date of activity
                           </span>
                           <span className="block font-sans text-xs font-semibold text-foreground">
                             {activeClaim.date}
@@ -874,19 +858,19 @@ export default function AdminClaimsPage() {
                             <Award className="z-10 h-10 w-10 fill-amber-400/70 text-amber-500 drop-shadow-md" />
                           </div>
                           <span className="z-10 mt-0.5 font-sans text-[8px] font-bold tracking-tighter text-amber-600 uppercase dark:text-amber-400">
-                            Official Seal
+                            Official seal
                           </span>
                         </div>
 
                         {/* Signature line */}
                         <div className="space-y-0.5 text-right">
                           <span className="block font-sans text-[9px] text-amber-800/60 uppercase dark:text-amber-400/60">
-                            Authorized Signature
+                            Authorized signature
                           </span>
                           <span className="block border-t border-amber-700/20 px-1 pt-0.5 font-serif text-xs font-medium text-amber-900/90 italic dark:text-amber-300/90">
                             {activeIteration >= 2
-                              ? "MARS Registrar"
-                              : "Org. Committee"}
+                              ? "MARS registrar"
+                              : "Org. committee"}
                           </span>
                         </div>
                       </div>
@@ -904,7 +888,7 @@ export default function AdminClaimsPage() {
                             htmlFor="pointsAwarded"
                             className="text-sm font-semibold"
                           >
-                            Points to Award
+                            Points to award
                           </Label>
                           <Input
                             id="pointsAwarded"
@@ -923,13 +907,13 @@ export default function AdminClaimsPage() {
                             onClick={handleReject}
                             className="cursor-pointer border-destructive text-destructive hover:bg-destructive/10"
                           >
-                            Reject Claim
+                            Reject claim
                           </Button>
                           <Button
                             onClick={handleApprove}
                             className="cursor-pointer border-none bg-red-800 text-white shadow-sm hover:bg-red-900 dark:bg-red-900 dark:hover:bg-red-800"
                           >
-                            Approve & Award
+                            Approve and award
                           </Button>
                         </div>
                       </div>
@@ -939,7 +923,7 @@ export default function AdminClaimsPage() {
                       <div className="text-sm text-muted-foreground">
                         This claim has been processed and is marked as{" "}
                         <span className="font-semibold text-foreground">
-                          {activeClaim.status}
+                          {activeClaim.status.toLowerCase()}
                         </span>
                         .
                       </div>
@@ -950,7 +934,7 @@ export default function AdminClaimsPage() {
                         className="cursor-pointer text-xs"
                       >
                         <RotateCcw className="mr-1 h-3 w-3" />
-                        Reset Status
+                        Reset status
                       </Button>
                     </div>
                   )}
@@ -960,7 +944,7 @@ export default function AdminClaimsPage() {
           </div>
         )}
       </div>
-      <Toaster position="top-right" closeButton richColors />
+      <Toaster position="top-right" closeButton={activeIteration < 5} richColors />
     </div>
   )
 }
@@ -1024,7 +1008,7 @@ function PdfRenderer({ base64 }: { base64: string }) {
       } catch (err) {
         console.error("Error rendering PDF:", err)
         if (active) {
-          setError(err instanceof Error ? err.message : "Failed to render PDF")
+          setError(err instanceof Error ? err.message : "Could not render PDF")
           setLoading(false)
         }
       }

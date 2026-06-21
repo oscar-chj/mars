@@ -16,21 +16,15 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
+import { Button } from "@/components/ui/button"
 import { usePhase } from "@/context/PhaseContext"
 import { cn } from "@/lib/utils"
 import { useMockStore } from "@/store/useMockStore"
-import { Award, Crown, Medal, Shield } from "lucide-react"
+import { Award, ChevronLeft, ChevronRight, Crown, Medal, Shield } from "lucide-react"
 import { useSearchParams } from "next/navigation"
 import { Suspense, useEffect, useState } from "react"
 import { Claim } from "@/types/claims"
-import {
-  Pagination,
-  PaginationContent,
-  PaginationItem,
-  PaginationLink,
-  PaginationNext,
-  PaginationPrevious,
-} from "@/components/ui/pagination"
+
 
 interface LeaderboardEntry {
   rank: number
@@ -112,7 +106,7 @@ function LeaderboardContent() {
 
   // Load from store or static mock based on phase
   let leaderboardData: LeaderboardEntry[] = []
-  if (activeIteration === 4) {
+  if (activeIteration >= 4) {
     const claimsList: Claim[] = isPhase1Claims
       ? [
           {
@@ -267,7 +261,7 @@ function LeaderboardContent() {
   const itemsPerPage = 5
   const totalPages = Math.ceil(leaderboardData.length / itemsPerPage)
   const paginatedData =
-    activeIteration === 4
+    activeIteration >= 4
       ? leaderboardData.slice(
           (currentPage - 1) * itemsPerPage,
           currentPage * itemsPerPage
@@ -282,11 +276,11 @@ function LeaderboardContent() {
           <h1 className="text-3xl font-bold tracking-tight">
             {activeIteration >= 2
               ? "Leaderboard"
-              : "Student Leaderboard"}
+              : "Student leaderboard"}
           </h1>
           <p className="mt-1 text-muted-foreground">
             Track top performers and see where you stand in the Community Merits
-            program.
+            program
           </p>
         </div>
       </div>
@@ -296,8 +290,8 @@ function LeaderboardContent() {
         <div className="flex items-center gap-3 rounded-2xl border border-blue-500/20 bg-blue-500/5 p-4 text-sm text-blue-600 dark:text-blue-400">
           <Shield className="h-4 w-4 shrink-0" />
           <div>
-            <span className="font-semibold">Admin View:</span> You are viewing
-            the student leaderboard as an administrator.
+            <span className="font-semibold">Admin view:</span> You are viewing
+            the student leaderboard as an administrator
           </div>
         </div>
       )}
@@ -306,10 +300,10 @@ function LeaderboardContent() {
       <Card className="overflow-hidden border shadow-sm">
         <CardHeader className="pb-2">
           <CardTitle className="text-center text-xl font-semibold md:text-left">
-            Top Performers
+            Top performers
           </CardTitle>
           <CardDescription className="text-center md:text-left">
-            Recognizing the leading contributors this semester.
+            Recognizing the leading contributors this semester
           </CardDescription>
         </CardHeader>
         <CardContent className="pt-6 pb-8">
@@ -442,11 +436,40 @@ function LeaderboardContent() {
 
       {/* Standing Table */}
       <Card className="border shadow-sm">
-        <CardHeader>
-          <CardTitle className="text-xl font-semibold">Rankings</CardTitle>
-          <CardDescription>
-            Full leaderboard of student merit achievements.
-          </CardDescription>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0">
+          <div>
+            <CardTitle className="text-xl font-semibold">Rankings</CardTitle>
+            <CardDescription>
+              Full leaderboard of student merit achievements
+            </CardDescription>
+          </div>
+          {activeIteration >= 4 && totalPages > 1 && (
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="icon"
+                className="h-7 w-7 cursor-pointer"
+                onClick={() => {
+                  if (currentPage > 1) setCurrentPage(currentPage - 1)
+                }}
+                disabled={currentPage === 1}
+              >
+                <ChevronLeft className="h-3.5 w-3.5" />
+              </Button>
+              <span className="text-xs font-semibold">{currentPage} / {totalPages}</span>
+              <Button
+                variant="outline"
+                size="icon"
+                className="h-7 w-7 cursor-pointer"
+                onClick={() => {
+                  if (currentPage < totalPages) setCurrentPage(currentPage + 1)
+                }}
+                disabled={currentPage === totalPages}
+              >
+                <ChevronRight className="h-3.5 w-3.5" />
+              </Button>
+            </div>
+          )}
         </CardHeader>
         <CardContent className="p-0 sm:p-6 sm:pt-0">
           <Table>
@@ -454,7 +477,7 @@ function LeaderboardContent() {
               <TableRow>
                 <TableHead className="w-24">Rank</TableHead>
                 <TableHead>Name</TableHead>
-                <TableHead>Matric Number</TableHead>
+                <TableHead>Matric number</TableHead>
                 <TableHead className="text-right">Points</TableHead>
               </TableRow>
             </TableHeader>
@@ -513,59 +536,6 @@ function LeaderboardContent() {
               })}
             </TableBody>
           </Table>
-          {activeIteration === 4 && totalPages >= 1 && (
-            <div className="flex items-center justify-center border-t py-4">
-              <Pagination>
-                <PaginationContent>
-                  <PaginationItem>
-                    <PaginationPrevious
-                      href="#"
-                      onClick={(e) => {
-                        e.preventDefault()
-                        if (currentPage > 1) setCurrentPage(currentPage - 1)
-                      }}
-                      className={
-                        currentPage === 1
-                          ? "pointer-events-none opacity-50"
-                          : ""
-                      }
-                    />
-                  </PaginationItem>
-                  {Array.from({ length: totalPages }, (_, i) => i + 1).map(
-                    (page) => (
-                      <PaginationItem key={page}>
-                        <PaginationLink
-                          href="#"
-                          isActive={currentPage === page}
-                          onClick={(e) => {
-                            e.preventDefault()
-                            setCurrentPage(page)
-                          }}
-                        >
-                          {page}
-                        </PaginationLink>
-                      </PaginationItem>
-                    )
-                  )}
-                  <PaginationItem>
-                    <PaginationNext
-                      href="#"
-                      onClick={(e) => {
-                        e.preventDefault()
-                        if (currentPage < totalPages)
-                          setCurrentPage(currentPage + 1)
-                      }}
-                      className={
-                        currentPage === totalPages
-                          ? "pointer-events-none opacity-50"
-                          : ""
-                      }
-                    />
-                  </PaginationItem>
-                </PaginationContent>
-              </Pagination>
-            </div>
-          )}
         </CardContent>
       </Card>
     </div>

@@ -20,7 +20,7 @@ import { usePhase } from "@/context/PhaseContext"
 import { cn } from "@/lib/utils"
 
 // Constants representing the active state of code development
-const MAX_DEVELOPED_ITERATION = 4
+const MAX_DEVELOPED_ITERATION = 5
 const MAX_DEVELOPED_PHASE = 3 // Phase 3 (Integration) is completed for Iteration 4
 
 export function Header() {
@@ -357,6 +357,60 @@ export function Header() {
                           >
                             <span className="flex-1">v4.3</span>
                             {activeIteration === 4 && activePhase === 3 && (
+                              <span className="h-1.5 w-1.5 rounded-full bg-primary" />
+                            )}
+                          </DropdownMenuItem>
+                        )}
+                      </DropdownMenuSubContent>
+                    </DropdownMenuPortal>
+                  </DropdownMenuSub>
+                )}
+
+                {MAX_DEVELOPED_ITERATION >= 5 && (
+                  <DropdownMenuSub>
+                    <DropdownMenuSubTrigger className="cursor-pointer font-medium">
+                      v5.0
+                    </DropdownMenuSubTrigger>
+                    <DropdownMenuPortal>
+                      <DropdownMenuSubContent className="w-20 min-w-20">
+                        {isOptionUnlocked(5, 1) && (
+                          <DropdownMenuItem
+                            className="cursor-pointer"
+                            onClick={() => {
+                              setIteration(5)
+                              setPhase(1)
+                            }}
+                          >
+                            <span className="flex-1">v5.1</span>
+                            {activeIteration === 5 && activePhase === 1 && (
+                              <span className="h-1.5 w-1.5 rounded-full bg-primary" />
+                            )}
+                          </DropdownMenuItem>
+                        )}
+                        {isOptionUnlocked(5, 2) && (
+                          <DropdownMenuItem
+                            className="cursor-pointer"
+                            onClick={() => {
+                              setIteration(5)
+                              setPhase(2)
+                            }}
+                          >
+                            <span className="flex-1">v5.2</span>
+                            {activeIteration === 5 && activePhase === 2 && (
+                              <span className="h-1.5 w-1.5 rounded-full bg-primary" />
+                            )}
+                          </DropdownMenuItem>
+                        )}
+                        {isOptionUnlocked(5, 3) && (
+                          <DropdownMenuItem
+                            className="cursor-pointer"
+                            onClick={() => {
+                              setIteration(5)
+                              setPhase(3)
+                            }}
+                          >
+                            <span className="flex-1">v5.3</span>
+                            {activeIteration === 5 && activePhase === 3 && (
                               <span className="h-1.5 w-1.5 rounded-full bg-primary" />
                             )}
                           </DropdownMenuItem>
