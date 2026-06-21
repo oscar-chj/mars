@@ -4,7 +4,7 @@ import React, { createContext, useContext, useState, useEffect } from "react"
 import { useMockStore } from "@/store/useMockStore"
 
 export type Phase = 1 | 2 | 3
-export type Iteration = 1 | 2 | 3
+export type Iteration = 1 | 2 | 3 | 4
 
 export interface PhaseContextType {
   activePhase: Phase
@@ -35,7 +35,12 @@ export function PhaseProvider({ children }: { children: React.ReactNode }) {
       let loadedIteration: Iteration = 1
       let loadedPhase: Phase = 3
 
-      if (savedIteration === "1" || savedIteration === "2" || savedIteration === "3") {
+      if (
+        savedIteration === "1" ||
+        savedIteration === "2" ||
+        savedIteration === "3" ||
+        savedIteration === "4"
+      ) {
         loadedIteration = Number(savedIteration) as Iteration
       }
       if (savedPhase === "1" || savedPhase === "2" || savedPhase === "3") {
@@ -67,7 +72,7 @@ export function PhaseProvider({ children }: { children: React.ReactNode }) {
       localStorage.setItem("mars_iteration", String(iteration))
     }
     useMockStore.getState().setIteration(iteration)
-    if (iteration === 2 || iteration === 3) {
+    if (iteration === 2 || iteration === 3 || iteration === 4) {
       setPhase(1)
     }
   }

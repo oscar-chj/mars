@@ -22,6 +22,15 @@ import { useMockStore } from "@/store/useMockStore"
 import { Award, Crown, Medal, Shield } from "lucide-react"
 import { useSearchParams } from "next/navigation"
 import { Suspense, useEffect, useState } from "react"
+import { Claim } from "@/types/claims"
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/components/ui/pagination"
 
 interface LeaderboardEntry {
   rank: number
@@ -37,11 +46,17 @@ function LeaderboardContent() {
   const { activePhase, activeIteration } = usePhase()
   const store = useMockStore()
   const [mounted, setMounted] = useState(false)
+  const [currentPage, setCurrentPage] = useState(1)
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setMounted(true)
   }, [])
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setCurrentPage(1)
+  }, [activeIteration, activePhase])
 
   // Static Mock data for Phase 1
   const getStaticLeaderboardData = (): LeaderboardEntry[] => {
@@ -97,10 +112,117 @@ function LeaderboardContent() {
 
   // Load from store or static mock based on phase
   let leaderboardData: LeaderboardEntry[] = []
-  if (isPhase1Claims) {
-    leaderboardData = getStaticLeaderboardData()
-  } else {
-    const students = Object.values(store.students)
+  if (activeIteration === 4) {
+    const claimsList: Claim[] = isPhase1Claims
+      ? [
+          {
+            id: "claim-1",
+            studentId: "alice",
+            studentName: "Alice Chen",
+            eventName: "Clean Energy Project Presentation",
+            category: "ACADEMIC" as const,
+            date: "2026-06-19",
+            organizer: "Science Department",
+            proofFileName: "clean_energy_presentation.pdf",
+            proofBase64: "",
+            pointsAwarded: null,
+            status: "PENDING" as const,
+          },
+          {
+            id: "claim-2",
+            studentId: "david",
+            studentName: "David Lee",
+            eventName: "Youth Coding Workshop Coordinator",
+            category: "ACADEMIC" as const,
+            date: "2026-06-18",
+            organizer: "School of Computing",
+            proofFileName: "youth_coding_workshop.pdf",
+            proofBase64: "",
+            pointsAwarded: null,
+            status: "PENDING" as const,
+          },
+          {
+            id: "claim-3",
+            studentId: "emma",
+            studentName: "Emma Stone",
+            eventName: "Sports Day Volunteer",
+            category: "VOLUNTEERING" as const,
+            date: "2026-06-12",
+            organizer: "Sports Club",
+            proofFileName: "sports_volunteer_cert.pdf",
+            proofBase64: "",
+            pointsAwarded: null,
+            status: "PENDING" as const,
+          },
+          {
+            id: "claim-4",
+            studentId: "alice",
+            studentName: "Alice Chen",
+            eventName: "Food Bank Drive",
+            category: "VOLUNTEERING" as const,
+            date: "2026-06-15",
+            organizer: "National Food Drive",
+            proofFileName: "food_bank_drive_merit.pdf",
+            proofBase64: "",
+            pointsAwarded: 40,
+            status: "APPROVED" as const,
+          },
+          {
+            id: "claim-5",
+            studentId: "alice",
+            studentName: "Alice Chen",
+            eventName: "Charity Bazaar Coordinator",
+            category: "VOLUNTEERING" as const,
+            date: "2026-05-20",
+            organizer: "Rotary Club",
+            proofFileName: "charity_bazaar_volunteering.pdf",
+            proofBase64: "",
+            pointsAwarded: null,
+            status: "REJECTED" as const,
+          },
+        ]
+      : store.claims
+
+    const studentsMap = isPhase1Claims
+      ? {
+          alice: {
+            id: "alice",
+            name: "Alice Chen",
+            email: "alice@student.edu",
+            matricNumber: "U2320491A",
+            points: 120,
+          },
+          david: {
+            id: "david",
+            name: "David Lee",
+            email: "david@student.edu",
+            matricNumber: "U2320555D",
+            points: 0,
+          },
+          emma: {
+            id: "emma",
+            name: "Emma Stone",
+            email: "emma@student.edu",
+            matricNumber: "U2320999E",
+            points: 0,
+          },
+        }
+      : store.students
+
+    const students = Object.values(studentsMap).map((s) => {
+      const studentClaims = claimsList.filter(
+        (c) => c.studentId === s.id && c.status === "APPROVED"
+      )
+      const dynamicPoints = studentClaims.reduce(
+        (sum, c) => sum + (c.pointsAwarded || 0),
+        0
+      )
+      return {
+        ...s,
+        points: dynamicPoints,
+      }
+    })
+
     const sorted = [...students].sort((a, b) => b.points - a.points)
     leaderboardData = sorted.map((s, idx) => ({
       rank: idx + 1,
@@ -109,6 +231,20 @@ function LeaderboardContent() {
       points: s.points,
       isCurrentUser: s.id === "alice",
     }))
+  } else {
+    if (isPhase1Claims) {
+      leaderboardData = getStaticLeaderboardData()
+    } else {
+      const students = Object.values(store.students)
+      const sorted = [...students].sort((a, b) => b.points - a.points)
+      leaderboardData = sorted.map((s, idx) => ({
+        rank: idx + 1,
+        name: s.name,
+        matricNumber: s.matricNumber,
+        points: s.points,
+        isCurrentUser: s.id === "alice",
+      }))
+    }
   }
 
   // 1st, 2nd, 3rd place extraction
@@ -128,13 +264,23 @@ function LeaderboardContent() {
     points: 0,
   }
 
+  const itemsPerPage = 5
+  const totalPages = Math.ceil(leaderboardData.length / itemsPerPage)
+  const paginatedData =
+    activeIteration === 4
+      ? leaderboardData.slice(
+          (currentPage - 1) * itemsPerPage,
+          currentPage * itemsPerPage
+        )
+      : leaderboardData
+
   return (
     <div className="mx-auto max-w-7xl animate-in space-y-8 p-4 duration-300 fade-in sm:p-6 lg:p-8">
       {/* Title & Description */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">
-            {activeIteration === 2 || activeIteration === 3
+            {activeIteration >= 2
               ? "Leaderboard"
               : "Student Leaderboard"}
           </h1>
@@ -313,7 +459,7 @@ function LeaderboardContent() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {leaderboardData.map((student) => {
+              {paginatedData.map((student) => {
                 const isRank1 = student.rank === 1
                 const isRank2 = student.rank === 2
                 const isRank3 = student.rank === 3
@@ -367,6 +513,59 @@ function LeaderboardContent() {
               })}
             </TableBody>
           </Table>
+          {activeIteration === 4 && totalPages >= 1 && (
+            <div className="flex items-center justify-center border-t py-4">
+              <Pagination>
+                <PaginationContent>
+                  <PaginationItem>
+                    <PaginationPrevious
+                      href="#"
+                      onClick={(e) => {
+                        e.preventDefault()
+                        if (currentPage > 1) setCurrentPage(currentPage - 1)
+                      }}
+                      className={
+                        currentPage === 1
+                          ? "pointer-events-none opacity-50"
+                          : ""
+                      }
+                    />
+                  </PaginationItem>
+                  {Array.from({ length: totalPages }, (_, i) => i + 1).map(
+                    (page) => (
+                      <PaginationItem key={page}>
+                        <PaginationLink
+                          href="#"
+                          isActive={currentPage === page}
+                          onClick={(e) => {
+                            e.preventDefault()
+                            setCurrentPage(page)
+                          }}
+                        >
+                          {page}
+                        </PaginationLink>
+                      </PaginationItem>
+                    )
+                  )}
+                  <PaginationItem>
+                    <PaginationNext
+                      href="#"
+                      onClick={(e) => {
+                        e.preventDefault()
+                        if (currentPage < totalPages)
+                          setCurrentPage(currentPage + 1)
+                      }}
+                      className={
+                        currentPage === totalPages
+                          ? "pointer-events-none opacity-50"
+                          : ""
+                      }
+                    />
+                  </PaginationItem>
+                </PaginationContent>
+              </Pagination>
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>

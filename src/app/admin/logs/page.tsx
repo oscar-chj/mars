@@ -2,18 +2,29 @@
 
 import { CheckCircle2, Mail, Play, RotateCcw, Search, Send } from "lucide-react"
 import { useEffect, useState } from "react"
+import { Toaster, toast } from "sonner"
 
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import {
   Drawer,
+  DrawerClose,
   DrawerContent,
-  DrawerDescription,
+  DrawerFooter,
   DrawerHeader,
   DrawerTitle,
 } from "@/components/ui/drawer"
 import { Input } from "@/components/ui/input"
+import {
+  Pagination,
+  PaginationContent,
+  PaginationEllipsis,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/components/ui/pagination"
 import {
   Select,
   SelectContent,
@@ -21,6 +32,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import { Separator } from "@/components/ui/separator"
 import {
   Table,
   TableBody,
@@ -30,6 +42,8 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { usePhase } from "@/context/PhaseContext"
+import { sendEmail } from "@/lib/email"
+import { generateResendNotificationHtml } from "@/lib/email-templates"
 import { cn } from "@/lib/utils"
 import { useMockStore } from "@/store/useMockStore"
 import { SystemLog } from "@/types/claims"
@@ -51,7 +65,7 @@ function EmailBodyFrame({ log }: { log: SystemLog }) {
     <div className="w-full overflow-hidden rounded-md border border-border bg-card font-sans shadow-sm">
       {/* Header Banner */}
       <div className="border-b border-border bg-primary px-6 py-4 text-center text-base font-bold tracking-wide text-primary-foreground">
-        {activeIteration === 2 || activeIteration === 3
+        {activeIteration >= 2
           ? "MARS Student Administration"
           : "Community Merits Program"}
       </div>
@@ -121,12 +135,12 @@ function EmailBodyFrame({ log }: { log: SystemLog }) {
         {/* Signature */}
         <div className="mt-6 space-y-0.5 border-t border-border pt-4 text-xs text-muted-foreground">
           <p className="font-semibold">
-            {activeIteration === 2 || activeIteration === 3
+            {activeIteration >= 2
               ? "MARS Registrar"
               : "Office of Student Affairs"}
           </p>
           <p>
-            {activeIteration === 2 || activeIteration === 3
+            {activeIteration >= 2
               ? "MARS Office of Records"
               : "Community Merits Commission"}
           </p>
@@ -135,6 +149,69 @@ function EmailBodyFrame({ log }: { log: SystemLog }) {
     </div>
   )
 }
+
+const baseLogs: SystemLog[] = [
+  {
+    id: "log-1",
+    timestamp: "2026-06-19 14:30:22",
+    eventType: "CLAIM_SUBMISSION" as const,
+    description: `Email dispatch: Claim Submission Confirmation for Clean Energy Project Presentation`,
+    recipientEmail: "alice@student.edu",
+    emailSubject: "Claim Submission Confirmation",
+    emailBody: "",
+    emailStatus: "DELIVERED" as const,
+  },
+  {
+    id: "log-2",
+    timestamp: "2026-06-18 10:15:45",
+    eventType: "CLAIM_SUBMISSION" as const,
+    description: `Email dispatch: Claim Submission Confirmation for Youth Coding Workshop Coordinator`,
+    recipientEmail: "david@student.edu",
+    emailSubject: "Claim Submission Confirmation",
+    emailBody: "",
+    emailStatus: "DELIVERED" as const,
+  },
+  {
+    id: "log-3",
+    timestamp: "2026-06-15 16:45:10",
+    eventType: "CLAIM_DECISION" as const,
+    description: `Email dispatch: Merit Claim Approved! (+40 points awarded)`,
+    recipientEmail: "alice@student.edu",
+    emailSubject: "Merit Claim Approved!",
+    emailBody: "",
+    emailStatus: "DELIVERED" as const,
+  },
+  {
+    id: "log-4",
+    timestamp: "2026-05-20 11:20:00",
+    eventType: "CLAIM_DECISION" as const,
+    description: `Email dispatch: Merit Claim Status Update (Rejection notification)`,
+    recipientEmail: "alice@student.edu",
+    emailSubject: "Merit Claim Status Update",
+    emailBody: "",
+    emailStatus: "DELIVERED" as const,
+  },
+  {
+    id: "log-5",
+    timestamp: "2026-06-20 10:00:00",
+    eventType: "CLAIM_SUBMISSION" as const,
+    description: `Email dispatch: Claim Submission Confirmation for Sports Day Volunteer`,
+    recipientEmail: "emma@student.edu",
+    emailSubject: "Claim Submission Confirmation",
+    emailBody: "",
+    emailStatus: "SENT" as const,
+  },
+  {
+    id: "log-6",
+    timestamp: "2026-06-14 09:12:33",
+    eventType: "CLAIM_DECISION" as const,
+    description: `Email dispatch: Merit Claim Status Update (Bounced delivery)`,
+    recipientEmail: "invalid-student@bounced.edu",
+    emailSubject: "Merit Claim Status Update",
+    emailBody: "",
+    emailStatus: "BOUNCED" as const,
+  },
+]
 
 export default function AdminLogsPage() {
   const { activePhase, activeIteration } = usePhase()
@@ -146,12 +223,19 @@ export default function AdminLogsPage() {
   const [eventFilter, setEventFilter] = useState("ALL")
   const [selectedLog, setSelectedLog] = useState<SystemLog | null>(null)
 
+  // Pagination State
+  const [currentPage, setCurrentPage] = useState(1)
+  const itemsPerPage = 5
+
   // Local logs state for Phase 1 simulation
-  const [localLogs, setLocalLogs] = useState<Record<number, SystemLog[]>>({
-    1: [],
-    2: [],
-    3: [],
-  })
+  const [localLogs, setLocalLogs] = useState<Record<number, SystemLog[]>>(
+    () => ({
+      1: [...baseLogs],
+      2: [...baseLogs],
+      3: [...baseLogs],
+      4: [...baseLogs],
+    })
+  )
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -160,70 +244,77 @@ export default function AdminLogsPage() {
 
   // Initial Mock logs
   const getInitialLogs = (iteration: number): SystemLog[] => {
-    const base = [
-      {
-        id: "log-1",
-        timestamp: "2026-06-19 14:30:22",
-        eventType: "CLAIM_SUBMISSION" as const,
-        description: `Email dispatch: Claim Submission Confirmation for Clean Energy Project Presentation`,
-        recipientEmail: "alice@student.edu",
-        emailSubject: "Claim Submission Confirmation",
-        emailBody: "",
-        emailStatus: "DELIVERED" as const,
-      },
-      {
-        id: "log-2",
-        timestamp: "2026-06-18 10:15:45",
-        eventType: "CLAIM_SUBMISSION" as const,
-        description: `Email dispatch: Claim Submission Confirmation for Youth Coding Workshop Coordinator`,
-        recipientEmail: "david@student.edu",
-        emailSubject: "Claim Submission Confirmation",
-        emailBody: "",
-        emailStatus: "DELIVERED" as const,
-      },
-      {
-        id: "log-3",
-        timestamp: "2026-06-15 16:45:10",
-        eventType: "CLAIM_DECISION" as const,
-        description: `Email dispatch: Merit Claim Approved! (+40 points awarded)`,
-        recipientEmail: "alice@student.edu",
-        emailSubject: "Merit Claim Approved!",
-        emailBody: "",
-        emailStatus: "DELIVERED" as const,
-      },
-      {
-        id: "log-4",
-        timestamp: "2026-05-20 11:20:00",
-        eventType: "CLAIM_DECISION" as const,
-        description: `Email dispatch: Merit Claim Status Update (Rejection notification)`,
-        recipientEmail: "alice@student.edu",
-        emailSubject: "Merit Claim Status Update",
-        emailBody: "",
-        emailStatus: "DELIVERED" as const,
-      },
-      {
-        id: "log-5",
-        timestamp: "2026-06-20 10:00:00",
-        eventType: "CLAIM_SUBMISSION" as const,
-        description: `Email dispatch: Claim Submission Confirmation for Sports Day Volunteer`,
-        recipientEmail: "emma@student.edu",
-        emailSubject: "Claim Submission Confirmation",
-        emailBody: "",
-        emailStatus: "SENT" as const,
-      },
-      {
-        id: "log-6",
-        timestamp: "2026-06-14 09:12:33",
-        eventType: "CLAIM_DECISION" as const,
-        description: `Email dispatch: Merit Claim Status Update (Bounced delivery)`,
-        recipientEmail: "invalid-student@bounced.edu",
-        emailSubject: "Merit Claim Status Update",
-        emailBody: "",
-        emailStatus: "BOUNCED" as const,
-      },
-    ]
+    return localLogs[iteration] || baseLogs
+  }
 
-    return [...localLogs[iteration], ...base]
+  const handleAction = (actionName: string) => {
+    if (!selectedLog) return
+
+    const updatedLog = { ...selectedLog, emailStatus: "DELIVERED" as const }
+    setSelectedLog(updatedLog)
+
+    // Update locally in localLogs state
+    setLocalLogs((prev) => {
+      const updated = { ...prev }
+      const currentLogs = prev[activeIteration] || []
+      updated[activeIteration] = currentLogs.map((log) =>
+        log.id === selectedLog.id
+          ? { ...log, emailStatus: "DELIVERED" as const }
+          : log
+      )
+      return updated
+    })
+
+    // Also update mock store if we are not in phase 1 claims
+    if (activePhase !== 1) {
+      useMockStore.setState((state) => {
+        const updatedLogs = state.logs.map((log) =>
+          log.id === selectedLog.id
+            ? { ...log, emailStatus: "DELIVERED" as const }
+            : log
+        )
+        const currentIter =
+          state.claims === state.claims4
+            ? 4
+            : state.claims === state.claims3
+              ? 3
+              : state.claims === state.claims2
+                ? 2
+                : 1
+        if (currentIter === 4) {
+          return { logs: updatedLogs, logs4: updatedLogs }
+        } else if (currentIter === 3) {
+          return { logs: updatedLogs, logs3: updatedLogs }
+        } else if (currentIter === 2) {
+          return { logs: updatedLogs, logs2: updatedLogs }
+        } else {
+          return { logs: updatedLogs, logs1: updatedLogs }
+        }
+      })
+    }
+
+    if (activeIteration === 4 && activePhase === 3) {
+      const html = generateResendNotificationHtml(
+        selectedLog.recipientEmail,
+        selectedLog.emailSubject,
+        actionName
+      )
+      sendEmail({
+        to: selectedLog.recipientEmail,
+        subject: `${actionName}: ${selectedLog.emailSubject}`,
+        html,
+      }).then((res) => {
+        if (res.error) {
+          toast.error(`Failed to execute ${actionName}`)
+        } else {
+          toast.success(`${actionName} sent successfully!`)
+        }
+      })
+    } else {
+      toast.success(`${actionName} Success`, {
+        description: `Log status has been updated to DELIVERED.`,
+      })
+    }
   }
 
   if (!mounted) {
@@ -252,6 +343,109 @@ export default function AdminLogsPage() {
 
     return matchesSearch && matchesStatus && matchesEvent
   })
+
+  // Pagination calculation
+  const totalItems = filteredLogs.length
+  const totalPages = Math.ceil(totalItems / itemsPerPage)
+  const startIndex = (currentPage - 1) * itemsPerPage
+  const endIndex = startIndex + itemsPerPage
+  const paginatedLogs = filteredLogs.slice(startIndex, endIndex)
+
+  const renderPaginationItems = () => {
+    const items = []
+    const maxVisible = 5
+
+    if (totalPages <= maxVisible) {
+      for (let i = 1; i <= totalPages; i++) {
+        items.push(
+          <PaginationItem key={i}>
+            <PaginationLink
+              isActive={currentPage === i}
+              onClick={(e) => {
+                e.preventDefault()
+                setCurrentPage(i)
+              }}
+              href="#"
+              className="cursor-pointer"
+            >
+              {i}
+            </PaginationLink>
+          </PaginationItem>
+        )
+      }
+    } else {
+      // Always show page 1
+      items.push(
+        <PaginationItem key={1}>
+          <PaginationLink
+            isActive={currentPage === 1}
+            onClick={(e) => {
+              e.preventDefault()
+              setCurrentPage(1)
+            }}
+            href="#"
+            className="cursor-pointer"
+          >
+            1
+          </PaginationLink>
+        </PaginationItem>
+      )
+
+      if (currentPage > 3) {
+        items.push(
+          <PaginationItem key="ellipsis-start">
+            <PaginationEllipsis />
+          </PaginationItem>
+        )
+      }
+
+      const start = Math.max(2, currentPage - 1)
+      const end = Math.min(totalPages - 1, currentPage + 1)
+      for (let i = start; i <= end; i++) {
+        items.push(
+          <PaginationItem key={i}>
+            <PaginationLink
+              isActive={currentPage === i}
+              onClick={(e) => {
+                e.preventDefault()
+                setCurrentPage(i)
+              }}
+              href="#"
+              className="cursor-pointer"
+            >
+              {i}
+            </PaginationLink>
+          </PaginationItem>
+        )
+      }
+
+      if (currentPage < totalPages - 2) {
+        items.push(
+          <PaginationItem key="ellipsis-end">
+            <PaginationEllipsis />
+          </PaginationItem>
+        )
+      }
+
+      items.push(
+        <PaginationItem key={totalPages}>
+          <PaginationLink
+            isActive={currentPage === totalPages}
+            onClick={(e) => {
+              e.preventDefault()
+              setCurrentPage(totalPages)
+            }}
+            href="#"
+            className="cursor-pointer"
+          >
+            {totalPages}
+          </PaginationLink>
+        </PaginationItem>
+      )
+    }
+
+    return items
+  }
 
   // Simulated notification triggers for testability
   const handleSimulateDispatch = () => {
@@ -286,18 +480,18 @@ export default function AdminLogsPage() {
     const newLog: SystemLog = {
       id: `log-${Date.now()}`,
       timestamp,
-      eventType: randomEvent as never,
+      eventType: randomEvent,
       description: `Email dispatch: ${subject} for simulated transaction`,
       recipientEmail: randomRecipient,
       emailSubject: subject,
       emailBody: "",
-      emailStatus: randomStatus as never,
+      emailStatus: randomStatus,
     }
 
     if (isPhase1Claims) {
       setLocalLogs((prev) => ({
         ...prev,
-        [1]: [newLog, ...prev[1]],
+        [activeIteration]: [newLog, ...(prev[activeIteration] || [])],
       }))
     } else {
       store.addLog(newLog)
@@ -355,19 +549,21 @@ export default function AdminLogsPage() {
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">
-            {activeIteration === 2 || activeIteration === 3 ? "System Logs" : "System Activity Logs"}
+            {activeIteration >= 2 ? "System Logs" : "System Activity Logs"}
           </h1>
           <p className="mt-1 text-muted-foreground">
             Monitor system events and email delivery status.
           </p>
         </div>
-        <Button
-          onClick={handleSimulateDispatch}
-          className="flex cursor-pointer items-center gap-1.5 sm:self-end"
-        >
-          <Play className="h-4 w-4 fill-current" />
-          Simulate Dispatch
-        </Button>
+        {!(activeIteration === 4 && activePhase === 3) && (
+          <Button
+            onClick={handleSimulateDispatch}
+            className="flex cursor-pointer items-center gap-1.5 sm:self-end"
+          >
+            <Play className="h-4 w-4 fill-current" />
+            Simulate Dispatch
+          </Button>
+        )}
       </div>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -430,7 +626,10 @@ export default function AdminLogsPage() {
           <Input
             placeholder="Search"
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            onChange={(e) => {
+              setSearch(e.target.value)
+              setCurrentPage(1)
+            }}
             className="w-full pl-9"
           />
         </div>
@@ -442,6 +641,7 @@ export default function AdminLogsPage() {
                 setSearch("")
                 setStatusFilter("ALL")
                 setEventFilter("ALL")
+                setCurrentPage(1)
               }}
               className="h-9 cursor-pointer px-2 text-muted-foreground lg:px-3"
             >
@@ -450,7 +650,13 @@ export default function AdminLogsPage() {
             </Button>
           )}
 
-          <Select value={statusFilter} onValueChange={setStatusFilter}>
+          <Select
+            value={statusFilter}
+            onValueChange={(val) => {
+              setStatusFilter(val)
+              setCurrentPage(1)
+            }}
+          >
             <SelectTrigger className="w-[140px] cursor-pointer">
               <SelectValue placeholder="All Statuses" />
             </SelectTrigger>
@@ -470,7 +676,13 @@ export default function AdminLogsPage() {
             </SelectContent>
           </Select>
 
-          <Select value={eventFilter} onValueChange={setEventFilter}>
+          <Select
+            value={eventFilter}
+            onValueChange={(val) => {
+              setEventFilter(val)
+              setCurrentPage(1)
+            }}
+          >
             <SelectTrigger className="w-[180px] cursor-pointer">
               <SelectValue placeholder="All Event Types" />
             </SelectTrigger>
@@ -491,7 +703,7 @@ export default function AdminLogsPage() {
 
       {/* Logs Table */}
       <Card className="overflow-hidden border shadow-sm">
-        <CardContent>
+        <CardContent className="space-y-4">
           <Table>
             <TableHeader>
               <TableRow>
@@ -504,7 +716,7 @@ export default function AdminLogsPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredLogs.length === 0 ? (
+              {paginatedLogs.length === 0 ? (
                 <TableRow>
                   <TableCell
                     colSpan={6}
@@ -514,7 +726,7 @@ export default function AdminLogsPage() {
                   </TableCell>
                 </TableRow>
               ) : (
-                filteredLogs.map((log) => (
+                paginatedLogs.map((log) => (
                   <TableRow key={log.id}>
                     <TableCell className="font-mono text-xs text-muted-foreground">
                       {log.timestamp}
@@ -554,121 +766,175 @@ export default function AdminLogsPage() {
               )}
             </TableBody>
           </Table>
+
+          {totalPages > 1 && (
+            <div className="flex items-center justify-between border-t border-border pt-4">
+              <div className="text-xs text-muted-foreground">
+                Showing {startIndex + 1} to {Math.min(endIndex, totalItems)} of{" "}
+                {totalItems} logs
+              </div>
+              <Pagination className="mx-0 w-auto justify-end">
+                <PaginationContent>
+                  <PaginationItem>
+                    <PaginationPrevious
+                      href="#"
+                      onClick={(e) => {
+                        e.preventDefault()
+                        if (currentPage > 1) setCurrentPage(currentPage - 1)
+                      }}
+                      className={cn(
+                        "cursor-pointer",
+                        currentPage === 1 && "pointer-events-none opacity-50"
+                      )}
+                    />
+                  </PaginationItem>
+                  {renderPaginationItems()}
+                  <PaginationItem>
+                    <PaginationNext
+                      href="#"
+                      onClick={(e) => {
+                        e.preventDefault()
+                        if (currentPage < totalPages)
+                          setCurrentPage(currentPage + 1)
+                      }}
+                      className={cn(
+                        "cursor-pointer",
+                        currentPage === totalPages &&
+                          "pointer-events-none opacity-50"
+                      )}
+                    />
+                  </PaginationItem>
+                </PaginationContent>
+              </Pagination>
+            </div>
+          )}
         </CardContent>
       </Card>
 
       {/* Email Inspector (Slide-out Drawer) */}
-      {selectedLog && (
-        <Drawer
-          direction="right"
-          open={!!selectedLog}
-          onOpenChange={(open) => !open && setSelectedLog(null)}
+      <Drawer
+        direction="right"
+        open={!!selectedLog}
+        onOpenChange={(open) => !open && setSelectedLog(null)}
+      >
+        <DrawerContent
+          className={cn(
+            activeIteration === 4 &&
+              "data-[vaul-drawer-direction=right]:sm:max-w-[35vw]"
+          )}
         >
-          <DrawerContent className="flex h-full w-full flex-col overflow-x-hidden overflow-y-auto sm:max-w-[35vw]">
-            <DrawerHeader className="border-b border-border pb-4">
+          <div className="flex h-full flex-col overflow-hidden">
+            <DrawerHeader>
               <DrawerTitle className="flex items-center gap-2 text-xl font-bold">
-                <Mail className="h-5 w-5 text-primary" />
-                <span>Email Inspector</span>
+                <Mail className="text-primary" />
+                <span>Inspect Email</span>
               </DrawerTitle>
-              <DrawerDescription>
-                View email details and delivery headers.
-              </DrawerDescription>
             </DrawerHeader>
 
-            <div className="flex-1 space-y-6 py-6">
-              {/* SMTP Header Details */}
-              <div className="space-y-2.5 rounded-lg border border-border bg-muted/40 p-4 font-mono text-xs">
-                <div className="flex justify-between gap-4">
-                  <span className="shrink-0 font-semibold text-muted-foreground">
-                    FROM:
-                  </span>
-                  <span className="truncate text-foreground">
-                    no-reply@communitymerits.edu
-                  </span>
-                </div>
-                <div className="flex justify-between gap-4">
-                  <span className="shrink-0 font-semibold text-muted-foreground">
-                    TO:
-                  </span>
-                  <span className="truncate text-foreground">
-                    {selectedLog.recipientEmail}
-                  </span>
-                </div>
-                <div className="flex justify-between gap-4">
-                  <span className="shrink-0 font-semibold text-muted-foreground">
-                    SUBJECT:
-                  </span>
-                  <span className="truncate font-bold text-foreground">
-                    {selectedLog.emailSubject}
-                  </span>
-                </div>
-                <div className="flex justify-between gap-4">
-                  <span className="shrink-0 font-semibold text-muted-foreground">
-                    DATE:
-                  </span>
-                  <span className="text-foreground">
-                    {selectedLog.timestamp}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between border-t border-border/50 pt-2.5">
-                  <span className="font-semibold text-muted-foreground">
-                    STATUS:
-                  </span>
-                  <span>{getStatusBadge(selectedLog.emailStatus)}</span>
+            {selectedLog && (
+              <div className="flex-1 overflow-y-auto px-4 py-4">
+                <div className="flex flex-col gap-5">
+                  {/* SMTP Header Details */}
+                  <div className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-2.5 text-xs">
+                    <span className="font-medium text-muted-foreground">
+                      FROM
+                    </span>
+                    <span className="truncate text-foreground">
+                      no-reply@mars.upm.edu.my
+                    </span>
+
+                    <span className="font-medium text-muted-foreground">
+                      TO
+                    </span>
+                    <span className="truncate text-foreground">
+                      {selectedLog.recipientEmail}
+                    </span>
+
+                    <span className="font-medium text-muted-foreground">
+                      SUBJECT
+                    </span>
+                    <span className="truncate font-semibold text-foreground">
+                      {selectedLog.emailSubject}
+                    </span>
+
+                    <span className="font-medium text-muted-foreground">
+                      DATE
+                    </span>
+                    <span className="text-foreground">
+                      {selectedLog.timestamp}
+                    </span>
+
+                    <span className="font-medium text-muted-foreground">
+                      STATUS
+                    </span>
+                    <span>{getStatusBadge(selectedLog.emailStatus)}</span>
+                  </div>
+
+                  <Separator />
+
+                  {/* Email Preview */}
+                  <div className="flex flex-col gap-2">
+                    <span className="text-xs font-semibold tracking-wider text-muted-foreground uppercase">
+                      Email Preview
+                    </span>
+                    <EmailBodyFrame log={selectedLog} />
+                  </div>
                 </div>
               </div>
+            )}
 
-              {/* Email Body Frame */}
-              <div className="space-y-2">
-                <span className="block text-xs font-semibold tracking-wider text-muted-foreground uppercase">
-                  Email Preview
-                </span>
-                <div className="overflow-hidden rounded-lg border border-border bg-zinc-50 p-4 shadow-inner sm:p-6 dark:bg-zinc-950">
-                  <EmailBodyFrame log={selectedLog} />
-                </div>
+            <DrawerFooter>
+              <div className="flex w-full flex-row items-center justify-between">
+                <DrawerClose asChild>
+                  <Button variant="outline" className="cursor-pointer">
+                    Close
+                  </Button>
+                </DrawerClose>
+
+                {/* Action buttons inside the preview card */}
+                {selectedLog &&
+                  (selectedLog.emailStatus === "BOUNCED" ||
+                    selectedLog.emailStatus === "SENT" ||
+                    selectedLog.emailStatus === "DELIVERED") && (
+                    <div className="flex flex-col gap-2 p-4">
+                      {selectedLog.emailStatus === "BOUNCED" && (
+                        <Button
+                          variant="destructive"
+                          className="w-full cursor-pointer"
+                          onClick={() => handleAction("Retry Delivery")}
+                        >
+                          <Send />
+                          Retry Delivery
+                        </Button>
+                      )}
+                      {selectedLog.emailStatus === "SENT" && (
+                        <Button
+                          variant="default"
+                          className="w-full cursor-pointer"
+                          onClick={() => handleAction("Force Send")}
+                        >
+                          <CheckCircle2 />
+                          Force Send
+                        </Button>
+                      )}
+                      {selectedLog.emailStatus === "DELIVERED" && (
+                        <Button
+                          variant="secondary"
+                          className="w-full cursor-pointer"
+                          onClick={() => handleAction("Resend Email")}
+                        >
+                          <RotateCcw />
+                          Resend Email
+                        </Button>
+                      )}
+                    </div>
+                  )}
               </div>
-            </div>
-
-            {/* Actions Footer */}
-            <div className="mt-auto flex gap-2 border-t border-border pt-4">
-              <Button
-                variant="outline"
-                className="flex-1 cursor-pointer"
-                onClick={() => setSelectedLog(null)}
-              >
-                Close
-              </Button>
-              {selectedLog.emailStatus === "BOUNCED" && (
-                <Button
-                  variant="destructive"
-                  className="flex flex-grow cursor-pointer items-center justify-center gap-1.5"
-                >
-                  <Send className="h-4 w-4" />
-                  Retry Delivery
-                </Button>
-              )}
-              {selectedLog.emailStatus === "SENT" && (
-                <Button
-                  variant="default"
-                  className="flex flex-grow cursor-pointer items-center justify-center gap-1.5"
-                >
-                  <CheckCircle2 className="h-4 w-4" />
-                  Force Send
-                </Button>
-              )}
-              {selectedLog.emailStatus === "DELIVERED" && (
-                <Button
-                  variant="secondary"
-                  className="flex flex-grow cursor-pointer items-center justify-center gap-1.5"
-                >
-                  <RotateCcw className="h-4 w-4" />
-                  Resend Email
-                </Button>
-              )}
-            </div>
-          </DrawerContent>
-        </Drawer>
-      )}
+            </DrawerFooter>
+          </div>
+        </DrawerContent>
+      </Drawer>
+      <Toaster position="top-right" closeButton richColors />
     </div>
   )
 }

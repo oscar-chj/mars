@@ -3,6 +3,7 @@
 import { Award, ChevronDown, Shield, User } from "lucide-react"
 import Link from "next/link"
 import { usePathname, useSearchParams } from "next/navigation"
+import { useEffect, useState } from "react"
 
 import { Button } from "@/components/ui/button"
 import {
@@ -18,10 +19,21 @@ import {
 import { usePhase } from "@/context/PhaseContext"
 import { cn } from "@/lib/utils"
 
+// Constants representing the active state of code development
+const MAX_DEVELOPED_ITERATION = 4
+const MAX_DEVELOPED_PHASE = 3 // Phase 3 (Integration) is completed for Iteration 4
+
 export function Header() {
   const pathname = usePathname()
   const searchParams = useSearchParams()
-  const { activePhase, activeIteration, isReady, setPhase, setIteration } = usePhase()
+  const { activePhase, activeIteration, isReady, setPhase, setIteration } =
+    usePhase()
+  const [mounted, setMounted] = useState(false)
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setMounted(true)
+  }, [])
 
   if (pathname === "/") {
     return null
@@ -51,6 +63,16 @@ export function Header() {
         { label: "Leaderboard", href: "/leaderboard" },
       ]
 
+  const isHeaderReady = mounted && isReady
+
+  // Helper to determine if a switcher option is unlocked
+  const isOptionUnlocked = (it: number, ph: number) => {
+    return (
+      it < MAX_DEVELOPED_ITERATION ||
+      (it === MAX_DEVELOPED_ITERATION && ph <= MAX_DEVELOPED_PHASE)
+    )
+  }
+
   return (
     <header className="sticky top-0 z-50 w-full border-b border-border bg-background/95 backdrop-blur">
       <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
@@ -62,16 +84,16 @@ export function Header() {
           >
             <Award className="h-5 w-5 text-primary" />
             <span className="hidden sm:inline">
-              {!isReady ? (
+              {!isHeaderReady ? (
                 <span className="invisible">Community Merits</span>
               ) : activeIteration === 1 ? (
                 "Community Merits"
               ) : (
-                "MARS Portal"
+                "MARS"
               )}
             </span>
             <span className="sm:hidden">
-              {!isReady ? (
+              {!isHeaderReady ? (
                 <span className="invisible">Merits</span>
               ) : activeIteration === 1 ? (
                 "Merits"
@@ -106,12 +128,12 @@ export function Header() {
         {/* Controls: Switchers */}
         <div className="flex items-center gap-2 sm:gap-4">
           {/* Phase Switcher */}
-          {!isReady ? (
+          {!isHeaderReady ? (
             <Button
               variant="outline"
               size="sm"
               disabled
-              className="w-16 h-9 animate-pulse bg-muted"
+              className="h-9 w-16 animate-pulse bg-muted"
             />
           ) : (
             <DropdownMenu>
@@ -128,143 +150,221 @@ export function Header() {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-24 min-w-24">
-                <DropdownMenuSub>
-                  <DropdownMenuSubTrigger className="cursor-pointer font-medium">
-                    v1.0
-                  </DropdownMenuSubTrigger>
-                  <DropdownMenuPortal>
-                    <DropdownMenuSubContent className="w-20 min-w-20">
-                      <DropdownMenuItem
-                        className="cursor-pointer"
-                        onClick={() => {
-                          setIteration(1)
-                          setPhase(1)
-                        }}
-                      >
-                        <span className="flex-1">v1.1</span>
-                        {activeIteration === 1 && activePhase === 1 && (
-                          <span className="h-1.5 w-1.5 rounded-full bg-primary" />
+                {MAX_DEVELOPED_ITERATION >= 1 && (
+                  <DropdownMenuSub>
+                    <DropdownMenuSubTrigger className="cursor-pointer font-medium">
+                      v1.0
+                    </DropdownMenuSubTrigger>
+                    <DropdownMenuPortal>
+                      <DropdownMenuSubContent className="w-20 min-w-20">
+                        {isOptionUnlocked(1, 1) && (
+                          <DropdownMenuItem
+                            className="cursor-pointer"
+                            onClick={() => {
+                              setIteration(1)
+                              setPhase(1)
+                            }}
+                          >
+                            <span className="flex-1">v1.1</span>
+                            {activeIteration === 1 && activePhase === 1 && (
+                              <span className="h-1.5 w-1.5 rounded-full bg-primary" />
+                            )}
+                          </DropdownMenuItem>
                         )}
-                      </DropdownMenuItem>
-                      <DropdownMenuItem
-                        className="cursor-pointer"
-                        onClick={() => {
-                          setIteration(1)
-                          setPhase(2)
-                        }}
-                      >
-                        <span className="flex-1">v1.2</span>
-                        {activeIteration === 1 && activePhase === 2 && (
-                          <span className="h-1.5 w-1.5 rounded-full bg-primary" />
+                        {isOptionUnlocked(1, 2) && (
+                          <DropdownMenuItem
+                            className="cursor-pointer"
+                            onClick={() => {
+                              setIteration(1)
+                              setPhase(2)
+                            }}
+                          >
+                            <span className="flex-1">v1.2</span>
+                            {activeIteration === 1 && activePhase === 2 && (
+                              <span className="h-1.5 w-1.5 rounded-full bg-primary" />
+                            )}
+                          </DropdownMenuItem>
                         )}
-                      </DropdownMenuItem>
-                      <DropdownMenuItem
-                        className="cursor-pointer"
-                        onClick={() => {
-                          setIteration(1)
-                          setPhase(3)
-                        }}
-                      >
-                        <span className="flex-1">v1.3</span>
-                        {activeIteration === 1 && activePhase === 3 && (
-                          <span className="h-1.5 w-1.5 rounded-full bg-primary" />
+                        {isOptionUnlocked(1, 3) && (
+                          <DropdownMenuItem
+                            className="cursor-pointer"
+                            onClick={() => {
+                              setIteration(1)
+                              setPhase(3)
+                            }}
+                          >
+                            <span className="flex-1">v1.3</span>
+                            {activeIteration === 1 && activePhase === 3 && (
+                              <span className="h-1.5 w-1.5 rounded-full bg-primary" />
+                            )}
+                          </DropdownMenuItem>
                         )}
-                      </DropdownMenuItem>
-                    </DropdownMenuSubContent>
-                  </DropdownMenuPortal>
-                </DropdownMenuSub>
+                      </DropdownMenuSubContent>
+                    </DropdownMenuPortal>
+                  </DropdownMenuSub>
+                )}
 
-                <DropdownMenuSub>
-                  <DropdownMenuSubTrigger className="cursor-pointer font-medium">
-                    v2.0
-                  </DropdownMenuSubTrigger>
-                  <DropdownMenuPortal>
-                    <DropdownMenuSubContent className="w-20 min-w-20">
-                      <DropdownMenuItem
-                        className="cursor-pointer"
-                        onClick={() => {
-                          setIteration(2)
-                          setPhase(1)
-                        }}
-                      >
-                        <span className="flex-1">v2.1</span>
-                        {activeIteration === 2 && activePhase === 1 && (
-                          <span className="h-1.5 w-1.5 rounded-full bg-primary" />
+                {MAX_DEVELOPED_ITERATION >= 2 && (
+                  <DropdownMenuSub>
+                    <DropdownMenuSubTrigger className="cursor-pointer font-medium">
+                      v2.0
+                    </DropdownMenuSubTrigger>
+                    <DropdownMenuPortal>
+                      <DropdownMenuSubContent className="w-20 min-w-20">
+                        {isOptionUnlocked(2, 1) && (
+                          <DropdownMenuItem
+                            className="cursor-pointer"
+                            onClick={() => {
+                              setIteration(2)
+                              setPhase(1)
+                            }}
+                          >
+                            <span className="flex-1">v2.1</span>
+                            {activeIteration === 2 && activePhase === 1 && (
+                              <span className="h-1.5 w-1.5 rounded-full bg-primary" />
+                            )}
+                          </DropdownMenuItem>
                         )}
-                      </DropdownMenuItem>
-                      <DropdownMenuItem
-                        className="cursor-pointer"
-                        onClick={() => {
-                          setIteration(2)
-                          setPhase(2)
-                        }}
-                      >
-                        <span className="flex-1">v2.2</span>
-                        {activeIteration === 2 && activePhase === 2 && (
-                          <span className="h-1.5 w-1.5 rounded-full bg-primary" />
+                        {isOptionUnlocked(2, 2) && (
+                          <DropdownMenuItem
+                            className="cursor-pointer"
+                            onClick={() => {
+                              setIteration(2)
+                              setPhase(2)
+                            }}
+                          >
+                            <span className="flex-1">v2.2</span>
+                            {activeIteration === 2 && activePhase === 2 && (
+                              <span className="h-1.5 w-1.5 rounded-full bg-primary" />
+                            )}
+                          </DropdownMenuItem>
                         )}
-                      </DropdownMenuItem>
-                      <DropdownMenuItem
-                        className="cursor-pointer"
-                        onClick={() => {
-                          setIteration(2) // internally resets phase to 1
-                          setPhase(3) // override to v2.3; batched with above in React 18
-                        }}
-                      >
-                        <span className="flex-1">v2.3</span>
-                        {activeIteration === 2 && activePhase === 3 && (
-                          <span className="h-1.5 w-1.5 rounded-full bg-primary" />
+                        {isOptionUnlocked(2, 3) && (
+                          <DropdownMenuItem
+                            className="cursor-pointer"
+                            onClick={() => {
+                              setIteration(2)
+                              setPhase(3)
+                            }}
+                          >
+                            <span className="flex-1">v2.3</span>
+                            {activeIteration === 2 && activePhase === 3 && (
+                              <span className="h-1.5 w-1.5 rounded-full bg-primary" />
+                            )}
+                          </DropdownMenuItem>
                         )}
-                      </DropdownMenuItem>
-                    </DropdownMenuSubContent>
-                  </DropdownMenuPortal>
-                </DropdownMenuSub>
+                      </DropdownMenuSubContent>
+                    </DropdownMenuPortal>
+                  </DropdownMenuSub>
+                )}
 
-                <DropdownMenuSub>
-                  <DropdownMenuSubTrigger className="cursor-pointer font-medium">
-                    v3.0
-                  </DropdownMenuSubTrigger>
-                  <DropdownMenuPortal>
-                    <DropdownMenuSubContent className="w-20 min-w-20">
-                      <DropdownMenuItem
-                        className="cursor-pointer"
-                        onClick={() => {
-                          setIteration(3)
-                          setPhase(1)
-                        }}
-                      >
-                        <span className="flex-1">v3.1</span>
-                        {activeIteration === 3 && activePhase === 1 && (
-                          <span className="h-1.5 w-1.5 rounded-full bg-primary" />
+                {MAX_DEVELOPED_ITERATION >= 3 && (
+                  <DropdownMenuSub>
+                    <DropdownMenuSubTrigger className="cursor-pointer font-medium">
+                      v3.0
+                    </DropdownMenuSubTrigger>
+                    <DropdownMenuPortal>
+                      <DropdownMenuSubContent className="w-20 min-w-20">
+                        {isOptionUnlocked(3, 1) && (
+                          <DropdownMenuItem
+                            className="cursor-pointer"
+                            onClick={() => {
+                              setIteration(3)
+                              setPhase(1)
+                            }}
+                          >
+                            <span className="flex-1">v3.1</span>
+                            {activeIteration === 3 && activePhase === 1 && (
+                              <span className="h-1.5 w-1.5 rounded-full bg-primary" />
+                            )}
+                          </DropdownMenuItem>
                         )}
-                      </DropdownMenuItem>
-                      <DropdownMenuItem
-                        className="cursor-pointer"
-                        onClick={() => {
-                          setIteration(3)
-                          setPhase(2)
-                        }}
-                      >
-                        <span className="flex-1">v3.2</span>
-                        {activeIteration === 3 && activePhase === 2 && (
-                          <span className="h-1.5 w-1.5 rounded-full bg-primary" />
+                        {isOptionUnlocked(3, 2) && (
+                          <DropdownMenuItem
+                            className="cursor-pointer"
+                            onClick={() => {
+                              setIteration(3)
+                              setPhase(2)
+                            }}
+                          >
+                            <span className="flex-1">v3.2</span>
+                            {activeIteration === 3 && activePhase === 2 && (
+                              <span className="h-1.5 w-1.5 rounded-full bg-primary" />
+                            )}
+                          </DropdownMenuItem>
                         )}
-                      </DropdownMenuItem>
-                      <DropdownMenuItem
-                        className="cursor-pointer"
-                        onClick={() => {
-                          setIteration(3)
-                          setPhase(3)
-                        }}
-                      >
-                        <span className="flex-1">v3.3</span>
-                        {activeIteration === 3 && activePhase === 3 && (
-                          <span className="h-1.5 w-1.5 rounded-full bg-primary" />
+                        {isOptionUnlocked(3, 3) && (
+                          <DropdownMenuItem
+                            className="cursor-pointer"
+                            onClick={() => {
+                              setIteration(3)
+                              setPhase(3)
+                            }}
+                          >
+                            <span className="flex-1">v3.3</span>
+                            {activeIteration === 3 && activePhase === 3 && (
+                              <span className="h-1.5 w-1.5 rounded-full bg-primary" />
+                            )}
+                          </DropdownMenuItem>
                         )}
-                      </DropdownMenuItem>
-                    </DropdownMenuSubContent>
-                  </DropdownMenuPortal>
-                </DropdownMenuSub>
+                      </DropdownMenuSubContent>
+                    </DropdownMenuPortal>
+                  </DropdownMenuSub>
+                )}
+
+                {MAX_DEVELOPED_ITERATION >= 4 && (
+                  <DropdownMenuSub>
+                    <DropdownMenuSubTrigger className="cursor-pointer font-medium">
+                      v4.0
+                    </DropdownMenuSubTrigger>
+                    <DropdownMenuPortal>
+                      <DropdownMenuSubContent className="w-20 min-w-20">
+                        {isOptionUnlocked(4, 1) && (
+                          <DropdownMenuItem
+                            className="cursor-pointer"
+                            onClick={() => {
+                              setIteration(4)
+                              setPhase(1)
+                            }}
+                          >
+                            <span className="flex-1">v4.1</span>
+                            {activeIteration === 4 && activePhase === 1 && (
+                              <span className="h-1.5 w-1.5 rounded-full bg-primary" />
+                            )}
+                          </DropdownMenuItem>
+                        )}
+                        {isOptionUnlocked(4, 2) && (
+                          <DropdownMenuItem
+                            className="cursor-pointer"
+                            onClick={() => {
+                              setIteration(4)
+                              setPhase(2)
+                            }}
+                          >
+                            <span className="flex-1">v4.2</span>
+                            {activeIteration === 4 && activePhase === 2 && (
+                              <span className="h-1.5 w-1.5 rounded-full bg-primary" />
+                            )}
+                          </DropdownMenuItem>
+                        )}
+                        {isOptionUnlocked(4, 3) && (
+                          <DropdownMenuItem
+                            className="cursor-pointer"
+                            onClick={() => {
+                              setIteration(4)
+                              setPhase(3)
+                            }}
+                          >
+                            <span className="flex-1">v4.3</span>
+                            {activeIteration === 4 && activePhase === 3 && (
+                              <span className="h-1.5 w-1.5 rounded-full bg-primary" />
+                            )}
+                          </DropdownMenuItem>
+                        )}
+                      </DropdownMenuSubContent>
+                    </DropdownMenuPortal>
+                  </DropdownMenuSub>
+                )}
               </DropdownMenuContent>
             </DropdownMenu>
           )}

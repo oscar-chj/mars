@@ -45,11 +45,23 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
+import {
+  Pagination,
+  PaginationContent,
+  PaginationEllipsis,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/components/ui/pagination"
 import { usePhase } from "@/context/PhaseContext"
 import { cn } from "@/lib/utils"
 import { useMockStore } from "@/store/useMockStore"
 import { Claim, Student } from "@/types/claims"
 import { format } from "date-fns"
+import { toast, Toaster } from "sonner"
+import { sendEmail } from "@/lib/email"
+import { generateSubmissionConfirmationHtml } from "@/lib/email-templates"
 
 export default function StudentDashboardPage() {
   const { activePhase, activeIteration } = usePhase()
@@ -66,6 +78,7 @@ export default function StudentDashboardPage() {
   const [organizer, setOrganizer] = useState("")
   const [fileName, setFileName] = useState("")
   const [fileBase64, setFileBase64] = useState("")
+  const [currentPage, setCurrentPage] = useState(1)
 
   // Local state for Phase 1 simulation
   const [localClaims, setLocalClaims] = useState<Record<number, Claim[]>>({
@@ -76,6 +89,11 @@ export default function StudentDashboardPage() {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setMounted(true)
   }, [])
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setCurrentPage(1)
+  }, [activePhase, activeIteration])
 
   // Initial Mock Claims (Phase 1)
   const getPhase1Claims = (iteration: number): Claim[] => {
@@ -121,7 +139,7 @@ export default function StudentDashboardPage() {
       },
     ]
 
-    return [...localClaims[iteration], ...base]
+    return [...(localClaims[iteration] || []), ...base]
   }
 
   if (!mounted) {
@@ -137,25 +155,69 @@ export default function StudentDashboardPage() {
   // Load from store or local state based on Phase
   const isPhase1 = activePhase === 1
 
+  const defaultStudent: Student = {
+    id: "alice",
+    name: "Alice Chen",
+    email: "alice@student.edu",
+    matricNumber:
+      activeIteration >= 2 ? "BC223014" : "U2320491A",
+    points: 120,
+  }
+
   const activeStudent: Student = isPhase1
-    ? {
-        id: "alice",
-        name: "Alice Chen",
-        email: "alice@student.edu",
-        matricNumber: activeIteration === 2 || activeIteration === 3 ? "BC223014" : "U2320491A",
-        points: 120,
-      }
-    : store.students["alice"] || {
-        id: "alice",
-        name: "Alice Chen",
-        email: "alice@student.edu",
-        matricNumber: activeIteration === 2 || activeIteration === 3 ? "BC223014" : "U2320491A",
-        points: 120,
-      }
+    ? defaultStudent
+    : store.students["alice"] || defaultStudent
 
   const claimsList = isPhase1
     ? getPhase1Claims(1)
     : store.claims.filter((c) => c.studentId === "alice")
+
+  const ITEMS_PER_PAGE = 5
+  const totalPages = Math.max(1, Math.ceil(claimsList.length / ITEMS_PER_PAGE))
+  const safeCurrentPage = Math.min(currentPage, totalPages)
+  const startIndex = (safeCurrentPage - 1) * ITEMS_PER_PAGE
+  const paginatedClaims = claimsList.slice(
+    startIndex,
+    startIndex + ITEMS_PER_PAGE
+  )
+
+  const getPageNumbers = () => {
+    const pages: (number | "ellipsis")[] = []
+    const maxVisible = 5
+    if (totalPages <= maxVisible) {
+      for (let i = 1; i <= totalPages; i++) {
+        pages.push(i)
+      }
+    } else {
+      pages.push(1)
+      if (safeCurrentPage > 3) {
+        pages.push("ellipsis")
+      }
+      const start = Math.max(2, safeCurrentPage - 1)
+      const end = Math.min(totalPages - 1, safeCurrentPage + 1)
+      for (let i = start; i <= end; i++) {
+        if (!pages.includes(i)) pages.push(i)
+      }
+      if (safeCurrentPage < totalPages - 2) {
+        pages.push("ellipsis")
+      }
+      if (!pages.includes(totalPages)) pages.push(totalPages)
+    }
+    return pages
+  }
+
+  const isFormIncompleteForIteration4 =
+    activeIteration === 4 &&
+    (!eventName.trim() ||
+      !organizer.trim() ||
+      !category ||
+      !selectedDate ||
+      !fileName ||
+      !fileBase64)
+
+  const isSubmitDisabled =
+    (activeIteration >= 2 && !selectedDate) ||
+    (activeIteration === 4 && isFormIncompleteForIteration4)
 
   // Calculated Stats
   const totalPoints = claimsList
@@ -168,11 +230,34 @@ export default function StudentDashboardPage() {
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (file) {
-      setFileName(file.name)
-      // File upload Base64 reader
+      if (activeIteration === 4) {
+        if (
+          file.type !== "application/pdf" &&
+          !file.name.toLowerCase().endsWith(".pdf")
+        ) {
+          alert("Only PDF files are allowed.")
+          e.target.value = ""
+          setFileName("")
+          setFileBase64("")
+          return
+        }
+      }
+
       const reader = new FileReader()
       reader.onloadend = () => {
-        setFileBase64(reader.result as string)
+        const resultStr = reader.result as string
+        if (
+          activeIteration === 4 &&
+          !resultStr.startsWith("data:application/pdf;base64,")
+        ) {
+          alert("Invalid PDF file format.")
+          e.target.value = ""
+          setFileName("")
+          setFileBase64("")
+          return
+        }
+        setFileName(file.name)
+        setFileBase64(resultStr)
       }
       reader.readAsDataURL(file)
     }
@@ -183,7 +268,7 @@ export default function StudentDashboardPage() {
     e.preventDefault()
 
     const formattedDate =
-      activeIteration === 2 || activeIteration === 3
+      activeIteration >= 2
         ? selectedDate
           ? format(selectedDate, "yyyy-MM-dd")
           : ""
@@ -210,10 +295,24 @@ export default function StudentDashboardPage() {
       }
       setLocalClaims((prev) => ({
         ...prev,
-        [1]: [newClaim, ...prev[1]],
+        [1]: [newClaim, ...(prev[1] || [])],
       }))
     } else {
       store.submitClaim(newClaimPayload)
+      if (activeIteration === 4 && activePhase === 3) {
+        const html = generateSubmissionConfirmationHtml("Alice Chen", eventName, formattedDate)
+        sendEmail({
+          to: "alice@student.edu",
+          subject: "Claim Submission Confirmed",
+          html,
+        }).then((res) => {
+          if (res.error) {
+            toast.error("Failed to send email confirmation")
+          } else {
+            toast.success("Email confirmation sent successfully!")
+          }
+        })
+      }
     }
 
     // Reset Form & Close Dialog
@@ -359,7 +458,7 @@ export default function StudentDashboardPage() {
 
               <div className="flex flex-col space-y-2">
                 <Label htmlFor="date">Date</Label>
-                {activeIteration === 2 || activeIteration === 3 ? (
+                {activeIteration >= 2 ? (
                   <Popover>
                     <PopoverTrigger asChild>
                       <Button
@@ -423,13 +522,20 @@ export default function StudentDashboardPage() {
                         : "Drag & drop your certificate here, or click to browse."}
                     </p>
                     <p className="mt-1 text-xs text-muted-foreground">
-                      Supported formats: PNG, JPG (max 5MB)
+                      {activeIteration === 4
+                        ? "Supported formats: PDF (max 5MB)"
+                        : "Supported formats: PNG, JPG (max 5MB)"}
                     </p>
                   </div>
                   <input
+                    key={isOpen ? fileName || "empty" : "closed"}
                     id="file-upload"
                     type="file"
-                    accept="image/*,application/pdf"
+                    accept={
+                      activeIteration === 4
+                        ? "application/pdf"
+                        : "image/*,application/pdf"
+                    }
                     className="hidden"
                     onChange={handleFileChange}
                   />
@@ -444,7 +550,7 @@ export default function StudentDashboardPage() {
                 </DialogClose>
                 <Button
                   type="submit"
-                  disabled={(activeIteration === 2 || activeIteration === 3) && !selectedDate}
+                  disabled={isSubmitDisabled}
                   className="cursor-pointer"
                 >
                   Submit Claim
@@ -523,48 +629,111 @@ export default function StudentDashboardPage() {
               Merit&quot; above to log your first activity.
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Event Name</TableHead>
-                    <TableHead>Category</TableHead>
-                    <TableHead>Date of Activity</TableHead>
-                    <TableHead>Organizer</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead className="text-right">Points</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {claimsList.map((claim) => (
-                    <TableRow
-                      key={claim.id}
-                      className="transition-colors hover:bg-muted/40"
-                    >
-                      <TableCell className="font-semibold text-foreground">
-                        {claim.eventName}
-                      </TableCell>
-                      <TableCell>{getCategoryBadge(claim.category)}</TableCell>
-                      <TableCell className="text-muted-foreground">
-                        {claim.date}
-                      </TableCell>
-                      <TableCell className="text-muted-foreground">
-                        {claim.organizer}
-                      </TableCell>
-                      <TableCell>{getStatusBadge(claim.status)}</TableCell>
-                      <TableCell className="text-right font-bold text-foreground">
-                        {claim.pointsAwarded !== null
-                          ? `+${claim.pointsAwarded}`
-                          : "-"}
-                      </TableCell>
+            <div className="space-y-4">
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Event Name</TableHead>
+                      <TableHead>Category</TableHead>
+                      <TableHead>Date of Activity</TableHead>
+                      <TableHead>Organizer</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead className="text-right">Points</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+                  </TableHeader>
+                  <TableBody>
+                    {paginatedClaims.map((claim) => (
+                      <TableRow
+                        key={claim.id}
+                        className="transition-colors hover:bg-muted/40"
+                      >
+                        <TableCell className="font-semibold text-foreground">
+                          {claim.eventName}
+                        </TableCell>
+                        <TableCell>
+                          {getCategoryBadge(claim.category)}
+                        </TableCell>
+                        <TableCell className="text-muted-foreground">
+                          {claim.date}
+                        </TableCell>
+                        <TableCell className="text-muted-foreground">
+                          {claim.organizer}
+                        </TableCell>
+                        <TableCell>{getStatusBadge(claim.status)}</TableCell>
+                        <TableCell className="text-right font-bold text-foreground">
+                          {claim.pointsAwarded !== null
+                            ? `+${claim.pointsAwarded}`
+                            : "-"}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+
+              {totalPages > 1 && (
+                <Pagination className="mt-4 flex justify-end">
+                  <PaginationContent>
+                    <PaginationItem>
+                      <PaginationPrevious
+                        href="#"
+                        onClick={(e) => {
+                          e.preventDefault()
+                          if (safeCurrentPage > 1) {
+                            setCurrentPage(safeCurrentPage - 1)
+                          }
+                        }}
+                        className={cn(
+                          "cursor-pointer",
+                          safeCurrentPage === 1 &&
+                            "pointer-events-none opacity-50"
+                        )}
+                      />
+                    </PaginationItem>
+                    {getPageNumbers().map((page, index) => (
+                      <PaginationItem key={index}>
+                        {page === "ellipsis" ? (
+                          <PaginationEllipsis />
+                        ) : (
+                          <PaginationLink
+                            href="#"
+                            isActive={page === safeCurrentPage}
+                            onClick={(e) => {
+                              e.preventDefault()
+                              setCurrentPage(page)
+                            }}
+                            className="cursor-pointer"
+                          >
+                            {page}
+                          </PaginationLink>
+                        )}
+                      </PaginationItem>
+                    ))}
+                    <PaginationItem>
+                      <PaginationNext
+                        href="#"
+                        onClick={(e) => {
+                          e.preventDefault()
+                          if (safeCurrentPage < totalPages) {
+                            setCurrentPage(safeCurrentPage + 1)
+                          }
+                        }}
+                        className={cn(
+                          "cursor-pointer",
+                          safeCurrentPage === totalPages &&
+                            "pointer-events-none opacity-50"
+                        )}
+                      />
+                    </PaginationItem>
+                  </PaginationContent>
+                </Pagination>
+              )}
             </div>
           )}
         </CardContent>
       </Card>
+      <Toaster position="top-right" closeButton richColors />
     </div>
   )
 }

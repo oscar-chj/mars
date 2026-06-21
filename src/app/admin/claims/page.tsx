@@ -8,7 +8,7 @@ import {
   RotateCcw,
   XCircle,
 } from "lucide-react"
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { toast, Toaster } from "sonner"
 
 import { Badge } from "@/components/ui/badge"
@@ -27,6 +27,16 @@ import { usePhase } from "@/context/PhaseContext"
 import { cn } from "@/lib/utils"
 import { useMockStore } from "@/store/useMockStore"
 import { Claim, Student } from "@/types/claims"
+import { sendEmail } from "@/lib/email"
+import { generateApprovalHtml, generateRejectionHtml } from "@/lib/email-templates"
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/components/ui/pagination"
 
 export default function AdminClaimsPage() {
   const { activePhase, activeIteration } = usePhase()
@@ -39,12 +49,14 @@ export default function AdminClaimsPage() {
   >("ALL")
   const [pointsInput, setPointsInput] = useState<string>("")
   const [mobileShowDetail, setMobileShowDetail] = useState(false)
+  const [currentPage, setCurrentPage] = useState(1)
 
   // Local state for Phase 1 simulation
   const [localClaims, setLocalClaims] = useState<Record<number, Claim[]>>({
     1: [],
     2: [],
     3: [],
+    4: [],
   })
   const [localStudents, setLocalStudents] = useState<
     Record<number, Record<string, Student>>
@@ -52,6 +64,7 @@ export default function AdminClaimsPage() {
     1: {},
     2: {},
     3: {},
+    4: {},
   })
 
   useEffect(() => {
@@ -200,16 +213,6 @@ export default function AdminClaimsPage() {
     return list
   }
 
-  if (!mounted) {
-    return (
-      <div className="mx-auto flex min-h-[50vh] max-w-7xl items-center justify-center p-4 sm:p-6 lg:p-8">
-        <div className="font-medium text-muted-foreground">
-          Loading claims inbox...
-        </div>
-      </div>
-    )
-  }
-
   const isPhase1Claims = activePhase === 1
 
   // Data selection based on Phase
@@ -235,15 +238,41 @@ export default function AdminClaimsPage() {
   const activeClaim =
     claimsList.find((c) => c.id === activeClaimId) || claimsList[0]
 
-  const activeStudentInfo = activeClaim
+  const rawStudentInfo = activeClaim
     ? studentsMap[activeClaim.studentId] || {
         id: activeClaim.studentId,
         name: activeClaim.studentName,
         email: `${activeClaim.studentName.toLowerCase().replace(/\s+/g, "")}@student.edu`,
-        matricNumber: activeIteration === 2 || activeIteration === 3 ? "BC223014" : "U2320491A",
+        matricNumber:
+          activeIteration >= 2
+            ? "BC223014"
+            : "U2320491A",
         points: 0,
       }
     : null
+
+  const activeStudentInfo = rawStudentInfo
+    ? {
+        ...rawStudentInfo,
+        points:
+          (activeIteration as number) === 4
+            ? claimsList
+                .filter(
+                  (c) =>
+                    c.studentId === rawStudentInfo.id &&
+                    c.status === "APPROVED" &&
+                    c.pointsAwarded !== null
+                )
+                .reduce((sum, c) => sum + (c.pointsAwarded || 0), 0)
+            : rawStudentInfo.points,
+      }
+    : null
+
+  // Reset pagination when filter or data changes
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setCurrentPage(1)
+  }, [filter, claimsList.length])
 
   // Prefill points input
   const defaultPoints =
@@ -278,7 +307,12 @@ export default function AdminClaimsPage() {
       }
       setLocalClaims((prev) => ({
         ...prev,
-        [1]: [updatedClaim, ...prev[1].filter((c) => c.id !== activeClaim.id)],
+        [activeIteration as number]: [
+          updatedClaim,
+          ...(prev[activeIteration as number] || []).filter(
+            (c) => c.id !== activeClaim.id
+          ),
+        ],
       }))
 
       // Update student locally
@@ -286,8 +320,8 @@ export default function AdminClaimsPage() {
       if (currentStud) {
         setLocalStudents((prev) => ({
           ...prev,
-          [1]: {
-            ...prev[1],
+          [activeIteration as number]: {
+            ...(prev[activeIteration as number] || {}),
             [activeClaim.studentId]: {
               ...currentStud,
               points: currentStud.points + pts,
@@ -302,6 +336,23 @@ export default function AdminClaimsPage() {
       // Zustand global update
       store.approveClaim(activeClaim.id, pts)
       toast.success(`Claim approved. Student awarded ${pts} points.`)
+      if (activeIteration === 4 && activePhase === 3) {
+        const student = store.students[activeClaim.studentId]
+        const currentPoints = student ? student.points : 0
+        const newBalance = currentPoints + pts
+        const html = generateApprovalHtml(activeClaim.studentName, activeClaim.eventName, pts, newBalance)
+        sendEmail({
+          to: "alice@student.edu",
+          subject: "Claim Approved",
+          html,
+        }).then((res) => {
+          if (res.error) {
+            toast.error("Failed to send approval email")
+          } else {
+            toast.success("Approval email sent successfully!")
+          }
+        })
+      }
     }
   }
 
@@ -317,12 +368,35 @@ export default function AdminClaimsPage() {
       }
       setLocalClaims((prev) => ({
         ...prev,
-        [1]: [updatedClaim, ...prev[1].filter((c) => c.id !== activeClaim.id)],
+        [activeIteration as number]: [
+          updatedClaim,
+          ...(prev[activeIteration as number] || []).filter(
+            (c) => c.id !== activeClaim.id
+          ),
+        ],
       }))
       toast.error("[Static Mock] Claim rejected locally.")
     } else {
       store.rejectClaim(activeClaim.id)
       toast.error("Claim rejected. Student has been notified.")
+      if (activeIteration === 4 && activePhase === 3) {
+        const html = generateRejectionHtml(
+          activeClaim.studentName,
+          activeClaim.eventName,
+          "Does not meet the guidelines for this category."
+        )
+        sendEmail({
+          to: "alice@student.edu",
+          subject: "Claim Rejected",
+          html,
+        }).then((res) => {
+          if (res.error) {
+            toast.error("Failed to send rejection email")
+          } else {
+            toast.success("Rejection email sent successfully!")
+          }
+        })
+      }
     }
   }
 
@@ -333,7 +407,9 @@ export default function AdminClaimsPage() {
       // Remove from local modifications list to reset to default
       setLocalClaims((prev) => ({
         ...prev,
-        [1]: prev[1].filter((c) => c.id !== activeClaim.id),
+        [activeIteration as number]: (
+          prev[activeIteration as number] || []
+        ).filter((c) => c.id !== activeClaim.id),
       }))
       toast.info("[Static Mock] Claim reset to default pending status.")
     } else {
@@ -418,15 +494,33 @@ export default function AdminClaimsPage() {
     }
   }
 
+  // Pagination
+  const itemsPerPage = 5
+  const totalPages = Math.ceil(filteredClaims.length / itemsPerPage)
+  const paginatedClaims = filteredClaims.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  )
+
+  if (!mounted) {
+    return (
+      <div className="mx-auto flex min-h-[50vh] max-w-7xl items-center justify-center p-4 sm:p-6 lg:p-8">
+        <div className="font-medium text-muted-foreground">
+          Loading claims inbox...
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="mx-auto max-w-7xl space-y-6 p-4 sm:p-6 lg:p-8">
-      <Toaster position="top-right" closeButton richColors />
-
       {/* Header Section */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">
-            {activeIteration === 2 || activeIteration === 3 ? "Claims Queue" : "Admin Claims Inbox"}
+            {activeIteration >= 2
+              ? "Claims Queue"
+              : "Admin Claims Inbox"}
           </h1>
           <p className="mt-1 text-muted-foreground">
             Review submitted student claims, verify certificates, and award
@@ -459,7 +553,7 @@ export default function AdminClaimsPage() {
                   Claims Queue
                 </CardTitle>
                 <span className="text-xs font-normal text-muted-foreground">
-                  Showing {filteredClaims.length} of {claimsList.length}
+                  Showing {paginatedClaims.length} of {filteredClaims.length}
                 </span>
               </div>
               <Tabs value={filter} onValueChange={(v) => setFilter(v as never)}>
@@ -477,41 +571,99 @@ export default function AdminClaimsPage() {
                   No claims found matching this filter.
                 </div>
               ) : (
-                <div className="max-h-[calc(100vh-280px)] divide-y divide-border overflow-y-auto">
-                  {filteredClaims.map((claim) => {
-                    const isActive = claim.id === activeClaimId
-                    return (
-                      <div
-                        key={claim.id}
-                        onClick={() => {
-                          setActiveClaimId(claim.id)
-                          setMobileShowDetail(true)
-                        }}
-                        className={cn(
-                          "cursor-pointer space-y-2 p-4 text-left transition-all select-none",
-                          isActive
-                            ? "border-l-4 border-primary bg-muted/80 font-medium dark:bg-muted/30"
-                            : "hover:bg-muted/40"
-                        )}
-                      >
-                        <div className="flex items-start justify-between gap-2">
-                          <span className="truncate font-semibold text-foreground">
-                            {claim.studentName}
-                          </span>
-                          <span className="shrink-0 text-xs text-muted-foreground">
-                            {claim.date}
-                          </span>
+                <div className="flex max-h-[calc(100vh-280px)] flex-col justify-between">
+                  <div className="divide-y divide-border overflow-y-auto">
+                    {paginatedClaims.map((claim) => {
+                      const isActive = claim.id === activeClaimId
+                      return (
+                        <div
+                          key={claim.id}
+                          onClick={() => {
+                            setActiveClaimId(claim.id)
+                            setMobileShowDetail(true)
+                          }}
+                          className={cn(
+                            "cursor-pointer space-y-2 p-4 text-left transition-all select-none",
+                            isActive
+                              ? "border-l-4 border-primary bg-muted/80 font-medium dark:bg-muted/30"
+                              : "hover:bg-muted/40"
+                          )}
+                        >
+                          <div className="flex items-start justify-between gap-2">
+                            <span className="truncate font-semibold text-foreground">
+                              {claim.studentName}
+                            </span>
+                            <span className="shrink-0 text-xs text-muted-foreground">
+                              {claim.date}
+                            </span>
+                          </div>
+                          <div className="line-clamp-1 text-sm text-muted-foreground">
+                            {claim.eventName}
+                          </div>
+                          <div className="flex items-center justify-between gap-2 pt-1">
+                            {getCategoryBadge(claim.category)}
+                            {getStatusBadge(claim.status)}
+                          </div>
                         </div>
-                        <div className="line-clamp-1 text-sm text-muted-foreground">
-                          {claim.eventName}
-                        </div>
-                        <div className="flex items-center justify-between gap-2 pt-1">
-                          {getCategoryBadge(claim.category)}
-                          {getStatusBadge(claim.status)}
-                        </div>
-                      </div>
-                    )
-                  })}
+                      )
+                    })}
+                  </div>
+
+                  {totalPages > 1 && (
+                    <div className="border-t bg-background p-4">
+                      <Pagination>
+                        <PaginationContent>
+                          <PaginationItem>
+                            <PaginationPrevious
+                              href="#"
+                              onClick={(e) => {
+                                e.preventDefault()
+                                if (currentPage > 1) {
+                                  setCurrentPage((prev) => prev - 1)
+                                }
+                              }}
+                              className={cn(
+                                currentPage === 1 &&
+                                  "pointer-events-none opacity-50"
+                              )}
+                            />
+                          </PaginationItem>
+                          {Array.from({ length: totalPages }).map((_, idx) => {
+                            const pageNum = idx + 1
+                            return (
+                              <PaginationItem key={pageNum}>
+                                <PaginationLink
+                                  href="#"
+                                  isActive={currentPage === pageNum}
+                                  onClick={(e) => {
+                                    e.preventDefault()
+                                    setCurrentPage(pageNum)
+                                  }}
+                                >
+                                  {pageNum}
+                                </PaginationLink>
+                              </PaginationItem>
+                            )
+                          })}
+                          <PaginationItem>
+                            <PaginationNext
+                              href="#"
+                              onClick={(e) => {
+                                e.preventDefault()
+                                if (currentPage < totalPages) {
+                                  setCurrentPage((prev) => prev + 1)
+                                }
+                              }}
+                              className={cn(
+                                currentPage === totalPages &&
+                                  "pointer-events-none opacity-50"
+                              )}
+                            />
+                          </PaginationItem>
+                        </PaginationContent>
+                      </Pagination>
+                    </div>
+                  )}
                 </div>
               )}
             </CardContent>
@@ -567,6 +719,14 @@ export default function AdminClaimsPage() {
                         </span>
                         <span className="font-mono text-xs font-semibold text-foreground">
                           {formatMatric(activeStudentInfo.matricNumber)}
+                        </span>
+                      </div>
+                      <div>
+                        <span className="block text-xs text-muted-foreground">
+                          Total Points
+                        </span>
+                        <span className="font-semibold text-foreground">
+                          {activeStudentInfo.points} pts
                         </span>
                       </div>
                       <div className="md:col-span-2">
@@ -638,83 +798,100 @@ export default function AdminClaimsPage() {
                     Certificate Preview
                   </span>
 
-                  {/* Default beautiful simulated template */}
-                  <div className="relative mx-auto flex min-h-[350px] max-w-xl flex-col justify-between rounded-lg border-8 border-double border-amber-800/10 bg-amber-50/40 p-6 font-serif text-amber-950 shadow-inner select-none dark:bg-amber-950/10 dark:text-amber-100">
-                    {/* Inner Gold Thin Border */}
-                    <div className="pointer-events-none absolute inset-2 rounded-md border-2 border-amber-700/20" />
+                  {(activeIteration as number) === 4 ? (
+                    activeClaim.proofBase64 &&
+                    activeClaim.proofBase64.startsWith(
+                      "data:application/pdf;base64,"
+                    ) ? (
+                      <PdfRenderer base64={activeClaim.proofBase64} />
+                    ) : (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={activeClaim.proofBase64 || "/mock-cert.png"}
+                        alt="Certificate Preview"
+                        className="mx-auto max-h-[500px] w-full rounded-md border border-border bg-muted/5 object-contain shadow-inner"
+                      />
+                    )
+                  ) : (
+                    /* Default beautiful simulated template */
+                    <div className="relative mx-auto flex min-h-[350px] max-w-xl flex-col justify-between rounded-lg border-8 border-double border-amber-800/10 bg-amber-50/40 p-6 font-serif text-amber-950 shadow-inner select-none dark:bg-amber-950/10 dark:text-amber-100">
+                      {/* Inner Gold Thin Border */}
+                      <div className="pointer-events-none absolute inset-2 rounded-md border-2 border-amber-700/20" />
 
-                    {/* Cert Decorative Corner Indicators */}
-                    <div className="absolute top-4 left-4 h-4 w-4 border-t border-l border-amber-700/40" />
-                    <div className="absolute top-4 right-4 h-4 w-4 border-t border-r border-amber-700/40" />
-                    <div className="absolute bottom-4 left-4 h-4 w-4 border-b border-l border-amber-700/40" />
-                    <div className="absolute right-4 bottom-4 h-4 w-4 border-r border-b border-amber-700/40" />
+                      {/* Cert Decorative Corner Indicators */}
+                      <div className="absolute top-4 left-4 h-4 w-4 border-t border-l border-amber-700/40" />
+                      <div className="absolute top-4 right-4 h-4 w-4 border-t border-r border-amber-700/40" />
+                      <div className="absolute bottom-4 left-4 h-4 w-4 border-b border-l border-amber-700/40" />
+                      <div className="absolute right-4 bottom-4 h-4 w-4 border-r border-b border-amber-700/40" />
 
-                    {/* Cert Title */}
-                    <div className="z-10 space-y-1 pt-2 text-center">
-                      <div className="font-sans text-[10px] font-semibold tracking-widest text-amber-800/80 uppercase dark:text-amber-300/80">
-                        Certificate of Achievement
-                      </div>
-                      <h3 className="text-xl font-bold tracking-tight text-amber-900 dark:text-amber-400">
-                        {activeIteration === 2 || activeIteration === 3
-                          ? "ACTIVITY RECORD RECORDING"
-                          : "COMMUNITY MERIT"}
-                      </h3>
-                    </div>
-
-                    {/* Cert Recipient Body */}
-                    <div className="z-10 my-4 space-y-2 text-center">
-                      <p className="text-xs text-amber-800/70 italic dark:text-amber-300/70">
-                        This is proudly presented to
-                      </p>
-                      <p className="inline-block border-b border-amber-700/20 px-6 pb-1 font-sans text-xl font-bold tracking-wide text-foreground">
-                        {activeClaim.studentName}
-                      </p>
-                      <p className="text-xs text-amber-800/70 italic dark:text-amber-300/70">
-                        for active participation and outstanding contribution in
-                      </p>
-                      <p className="mx-auto line-clamp-2 max-w-md px-4 font-sans text-sm font-semibold text-amber-950 dark:text-amber-200">
-                        {activeClaim.eventName}
-                      </p>
-                    </div>
-
-                    {/* Cert Signatures and Seal */}
-                    <div className="z-10 flex w-full items-end justify-between px-2 pt-2">
-                      {/* Date segment */}
-                      <div className="space-y-0.5 text-left">
-                        <span className="block font-sans text-[9px] text-amber-800/60 uppercase dark:text-amber-400/60">
-                          Date of Activity
-                        </span>
-                        <span className="block font-sans text-xs font-semibold text-foreground">
-                          {activeClaim.date}
-                        </span>
-                      </div>
-
-                      {/* Gold Ribbon Seal */}
-                      <div className="-mb-2 flex scale-90 flex-col items-center justify-center">
-                        <div className="relative flex items-center justify-center">
-                          {/* Outer ribbons mockup */}
-                          <div className="absolute top-4 h-8 w-2 origin-top rotate-12 rounded-b bg-amber-500/80" />
-                          <div className="absolute top-4 h-8 w-2 origin-top -rotate-12 rounded-b bg-amber-500/80" />
-                          <Award className="z-10 h-10 w-10 fill-amber-400/70 text-amber-500 drop-shadow-md" />
+                      {/* Cert Title */}
+                      <div className="z-10 space-y-1 pt-2 text-center">
+                        <div className="font-sans text-[10px] font-semibold tracking-widest text-amber-800/80 uppercase dark:text-amber-300/80">
+                          Certificate of Achievement
                         </div>
-                        <span className="z-10 mt-0.5 font-sans text-[8px] font-bold tracking-tighter text-amber-600 uppercase dark:text-amber-400">
-                          Official Seal
-                        </span>
+                        <h3 className="text-xl font-bold tracking-tight text-amber-900 dark:text-amber-400">
+                          {activeIteration >= 2
+                            ? "ACTIVITY RECORD RECORDING"
+                            : "COMMUNITY MERIT"}
+                        </h3>
                       </div>
 
-                      {/* Signature line */}
-                      <div className="space-y-0.5 text-right">
-                        <span className="block font-sans text-[9px] text-amber-800/60 uppercase dark:text-amber-400/60">
-                          Authorized Signature
-                        </span>
-                        <span className="block border-t border-amber-700/20 px-1 pt-0.5 font-serif text-xs font-medium text-amber-900/90 italic dark:text-amber-300/90">
-                          {activeIteration === 2 || activeIteration === 3
-                            ? "MARS Registrar"
-                            : "Org. Committee"}
-                        </span>
+                      {/* Cert Recipient Body */}
+                      <div className="z-10 my-4 space-y-2 text-center">
+                        <p className="text-xs text-amber-800/70 italic dark:text-amber-300/70">
+                          This is proudly presented to
+                        </p>
+                        <p className="inline-block border-b border-amber-700/20 px-6 pb-1 font-sans text-xl font-bold tracking-wide text-foreground">
+                          {activeClaim.studentName}
+                        </p>
+                        <p className="text-xs text-amber-800/70 italic dark:text-amber-300/70">
+                          for active participation and outstanding contribution
+                          in
+                        </p>
+                        <p className="mx-auto line-clamp-2 max-w-md px-4 font-sans text-sm font-semibold text-amber-950 dark:text-amber-200">
+                          {activeClaim.eventName}
+                        </p>
+                      </div>
+
+                      {/* Cert Signatures and Seal */}
+                      <div className="z-10 flex w-full items-end justify-between px-2 pt-2">
+                        {/* Date segment */}
+                        <div className="space-y-0.5 text-left">
+                          <span className="block font-sans text-[9px] text-amber-800/60 uppercase dark:text-amber-400/60">
+                            Date of Activity
+                          </span>
+                          <span className="block font-sans text-xs font-semibold text-foreground">
+                            {activeClaim.date}
+                          </span>
+                        </div>
+
+                        {/* Gold Ribbon Seal */}
+                        <div className="-mb-2 flex scale-90 flex-col items-center justify-center">
+                          <div className="relative flex items-center justify-center">
+                            {/* Outer ribbons mockup */}
+                            <div className="absolute top-4 h-8 w-2 origin-top rotate-12 rounded-b bg-amber-500/80" />
+                            <div className="absolute top-4 h-8 w-2 origin-top -rotate-12 rounded-b bg-amber-500/80" />
+                            <Award className="z-10 h-10 w-10 fill-amber-400/70 text-amber-500 drop-shadow-md" />
+                          </div>
+                          <span className="z-10 mt-0.5 font-sans text-[8px] font-bold tracking-tighter text-amber-600 uppercase dark:text-amber-400">
+                            Official Seal
+                          </span>
+                        </div>
+
+                        {/* Signature line */}
+                        <div className="space-y-0.5 text-right">
+                          <span className="block font-sans text-[9px] text-amber-800/60 uppercase dark:text-amber-400/60">
+                            Authorized Signature
+                          </span>
+                          <span className="block border-t border-amber-700/20 px-1 pt-0.5 font-serif text-xs font-medium text-amber-900/90 italic dark:text-amber-300/90">
+                            {activeIteration >= 2
+                              ? "MARS Registrar"
+                              : "Org. Committee"}
+                          </span>
+                        </div>
                       </div>
                     </div>
-                  </div>
+                  )}
                 </div>
 
                 {/* Verification Actions Box */}
@@ -783,6 +960,103 @@ export default function AdminClaimsPage() {
           </div>
         )}
       </div>
+      <Toaster position="top-right" closeButton richColors />
+    </div>
+  )
+}
+
+function PdfRenderer({ base64 }: { base64: string }) {
+  const canvasRef = useRef<HTMLCanvasElement | null>(null)
+  const [error, setError] = useState<string | null>(null)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    let active = true
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setLoading(true)
+    setError(null)
+
+    async function renderPdf() {
+      try {
+        const base64Data = base64.replace(/^data:application\/pdf;base64,/, "")
+        const binaryString = window.atob(base64Data)
+        const len = binaryString.length
+        const bytes = new Uint8Array(len)
+        for (let i = 0; i < len; i++) {
+          bytes[i] = binaryString.charCodeAt(i)
+        }
+
+        const pdfjs = await import("pdfjs-dist")
+        // Set workerSrc
+        pdfjs.GlobalWorkerOptions.workerSrc = "/pdf.worker.min.js"
+
+        const loadingTask = pdfjs.getDocument({ data: bytes })
+        const pdf = await loadingTask.promise
+
+        if (!active) return
+
+        const page = await pdf.getPage(1)
+        if (!active) return
+
+        const canvas = canvasRef.current
+        if (!canvas) return
+
+        const context = canvas.getContext("2d")
+        if (!context) {
+          throw new Error("Could not get 2d context")
+        }
+
+        // Adjust scale/viewport to match parent container width
+        const viewport = page.getViewport({ scale: 1.5 })
+        canvas.height = viewport.height
+        canvas.width = viewport.width
+
+        const renderContext = {
+          canvasContext: context,
+          canvas: canvas,
+          viewport: viewport,
+        }
+
+        await page.render(renderContext).promise
+        if (active) {
+          setLoading(false)
+        }
+      } catch (err) {
+        console.error("Error rendering PDF:", err)
+        if (active) {
+          setError(err instanceof Error ? err.message : "Failed to render PDF")
+          setLoading(false)
+        }
+      }
+    }
+
+    renderPdf()
+
+    return () => {
+      active = false
+    }
+  }, [base64])
+
+  if (error) {
+    return (
+      <div className="flex min-h-[350px] items-center justify-center rounded-md border border-destructive/20 bg-destructive/5 p-4 text-sm text-destructive">
+        Error loading PDF proof: {error}
+      </div>
+    )
+  }
+
+  return (
+    <div className="relative flex min-h-[350px] items-center justify-center rounded-md border border-border bg-muted/10">
+      {loading && (
+        <div className="absolute inset-0 flex items-center justify-center bg-background/50 text-sm text-muted-foreground">
+          Loading PDF proof...
+        </div>
+      )}
+      <canvas
+        id="pdf-canvas"
+        ref={canvasRef}
+        className="max-h-[500px] w-full rounded-md object-contain"
+      />
     </div>
   )
 }
